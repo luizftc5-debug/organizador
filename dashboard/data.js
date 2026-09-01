@@ -1,15 +1,20 @@
-// Dados do painel de organização pessoal de Luiz.
-//
-// Este arquivo serve como "seed" inicial (financeiro.html usa a planilha
-// interativa salva no navegador, mas parte destes dados no primeiro uso).
-// Edite manualmente ou peça ao agente para atualizar conforme novas
-// informações forem compartilhadas.
-//
-// Datas no formato "AAAA-MM-DD".
+/* ===========================================================================
+   Conteúdo inicial (seed) do painel.
+
+   ATENÇÃO: este arquivo é lido UMA ÚNICA VEZ — na primeira vez que você abre o
+   dashboard num navegador. Depois disso, tudo que você cadastra pelas telas
+   fica salvo no próprio navegador, e este arquivo deixa de ser consultado.
+
+   Ou seja: para o uso do dia a dia, NÃO é preciso editar nada aqui. Use os
+   botões "+ Lançamento", "+ Prazo", "+ Disciplina", "+ Projeto" nas páginas.
+   Para backup ou para levar os dados a outro computador, use o botão "Backup"
+   na barra lateral (exporta e importa um arquivo .json com tudo).
+
+   Preencha abaixo apenas se quiser que um navegador novo já comece com dados.
+   Datas no formato "AAAA-MM-DD".
+   =========================================================================== */
 
 const DATA = {
-  atualizadoEm: "2026-09-01",
-
   financeiro: {
     saldoAtual: 0,
     moeda: "BRL",
@@ -21,39 +26,43 @@ const DATA = {
       "Educação",
       "Lazer",
       "Assinaturas",
-      "Renda (side hustle)",
+      "Renda",
       "Outros",
     ],
     receitasMes: [
-      // { descricao: "Bolsa de iniciação científica", valor: 0, data: "2026-09-05" }
+      // { descricao: "Bolsa de iniciação científica", valor: 700, data: "2026-09-05", categoria: "Renda" }
     ],
     despesasMes: [
-      // { descricao: "Aluguel/contas", valor: 0, data: "2026-09-10" }
+      // { descricao: "Transporte para o hospital", valor: 180, data: "2026-09-10", categoria: "Transporte" }
     ],
     metas: [
-      // { descricao: "Reserva de emergência", valorAlvo: 0, valorAtual: 0, prazo: "2026-12-31" }
+      // { descricao: "Reserva de emergência", valorAlvo: 3000, valorAtual: 500, prazo: "2026-12-31" }
     ],
   },
 
   faculdade: {
     disciplinas: [
-      // { nome: "Clínica Médica", status: "ativa", nota: null, proximaAvaliacao: "2026-09-15" }
+      // { nome: "Clínica Médica", status: "ativa", professor: "", nota: null, proximaAvaliacao: "2026-09-15" }
     ],
     prazos: [
-      // { descricao: "Entrega do TCC (metanálise)", data: "2026-11-30", tipo: "tcc" }
+      // { descricao: "Entrega da metanálise", data: "2026-11-30", tipo: "TCC", concluido: false }
     ],
   },
 
   projetos: [
     // {
-    //   nome: "Metanálise - TCC",
+    //   nome: "Metanálise — TCC",
     //   status: "em andamento",
-    //   proximoPasso: "Extração de dados dos estudos incluídos",
+    //   descricao: "Revisão sistemática com a Dra. …",
     //   deadline: "2026-11-30",
+    //   passos: [
+    //     { texto: "Busca nas bases", feito: true },
+    //     { texto: "Extração de dados", feito: false },
+    //   ],
     // },
   ],
 
   oportunidades: [
-    // { descricao: "Curso online sobre metodologia de revisão sistemática", area: "Faculdade + Financeiro" }
+    // { descricao: "Monitoria de fisiologia", area: "Faculdade + Financeiro", potencial: "R$ 600/mês", esforco: "médio" }
   ],
 };

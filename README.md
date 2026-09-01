@@ -1,54 +1,83 @@
-# Organizador Pessoal - Luiz
+# Organizador Pessoal
 
-Repositório de apoio ao agente de organização pessoal descrito em [`CLAUDE.md`](./CLAUDE.md), cobrindo os três pilares: **Financeiro**, **Faculdade** e **Projetos**.
+Painel para acompanhar três frentes ao mesmo tempo — **Financeiro**, **Faculdade** e **Projetos** —
+com alerta automático quando prazos de áreas diferentes caem na mesma semana.
 
-## Dashboard
+Aplicação estática: HTML, CSS e JavaScript puros, sem instalação e sem servidor de dados.
 
-Um dashboard estático multi-página fica em [`dashboard/`](./dashboard/):
+## Como abrir
 
-- `dashboard/index.html` — visão geral dos 3 pilares, com alertas de conflito de prazos
-- `dashboard/financeiro.html` — planilha completa de receitas/despesas por categoria, gráfico de gastos, metas e documentos do Google Drive
-- `dashboard/faculdade.html` — disciplinas, prazos, provas e agenda do Google Calendar
-- `dashboard/projetos.html` — status, próximos passos e deadlines dos projetos + oportunidades de renda
-- `dashboard/data.js` — dados fixos (seed) editáveis: disciplinas, prazos, projetos, oportunidades
-- `dashboard/config.js` — configuração da integração com Google (Client ID)
-- `dashboard/shared.css` / `dashboard/shared.js` — estilos e utilidades compartilhadas
-- `dashboard/google-integration.js` — login e chamadas às APIs do Google Calendar/Drive
+**Online (recomendado):** <https://luizftc5-debug.github.io/organizador/dashboard/>
 
-### Como rodar
-
-O login do Google **não funciona** abrindo o arquivo diretamente (`file://`). Rode um servidor local simples:
+**No seu computador**, pela pasta `dashboard`:
 
 ```bash
-cd dashboard
-python3 -m http.server 8000
+python -m http.server 8000
 ```
 
-Depois abra `http://localhost:8000` no navegador.
+E acesse <http://localhost:8000>.
 
-> Sem a integração Google configurada, o dashboard funciona normalmente — só os blocos "Google Calendar"/"Google Drive" ficam vazios/desconectados.
+> Abrir o arquivo direto (`file://`) funciona para tudo, **menos** o login do Google — ele exige
+> `http://` ou `https://`.
 
-### Preenchendo os dados
+## Como usar
 
-- **Financeiro**: abra `financeiro.html` e use a planilha interativa (botão "+ Novo lançamento"). Os lançamentos ficam salvos no `localStorage` do navegador. Use "Exportar (JSON)" para fazer backup e "Importar (JSON)" para restaurar/migrar entre computadores.
-- **Faculdade** e **Projetos**: edite `dashboard/data.js` com suas disciplinas, prazos, projetos e oportunidades.
+Não é preciso editar nenhum arquivo. Tudo se cadastra pelos botões das telas:
 
-O painel destaca automaticamente conflitos de prazos (ex.: prova e deadline de projeto na mesma semana).
+| Onde | O que dá para fazer |
+|---|---|
+| **Visão geral** | Saldo, alertas de atraso e de semana cheia, agenda dos próximos 30 dias, leitura automática da situação |
+| **Financeiro** | Lançar receitas e despesas, ver gastos por categoria e por mês, acompanhar metas |
+| **Faculdade** | Disciplinas com nota e data de prova, prazos e entregas com marcação de concluído |
+| **Projetos** | Projetos divididos em etapas, com barra de progresso, e oportunidades de renda |
 
-### Conectando ao Google Calendar e Drive
+Excluiu algo sem querer? O aviso que aparece embaixo traz **Desfazer**.
 
-1. Acesse [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials) e crie um projeto.
-2. Configure a "Tela de consentimento OAuth" (tipo Externo, adicione seu e-mail como usuário de teste).
-3. Em "Credenciais" → "Criar credenciais" → "ID do cliente OAuth":
-   - Tipo: **Aplicativo da Web**
-   - Origem JavaScript autorizada: `http://localhost:8000` (ou a porta que você usar)
-4. Em "APIs e serviços" → "Biblioteca", ative **Google Calendar API** e **Google Drive API**.
-5. Copie o Client ID gerado e cole em `dashboard/config.js` (`GOOGLE_CONFIG.CLIENT_ID`).
-6. Abra o dashboard via `http://localhost:8000` e clique em "Conectar ao Google" nas páginas Faculdade/Financeiro.
+### Onde ficam seus dados
 
-## Próximos passos sugeridos
+No próprio navegador (localStorage) — nada é enviado para lugar nenhum. Consequência prática: os
+dados ficam **naquele navegador, naquele computador**.
 
-- Preencher `dashboard/data.js` com disciplinas, prazos e projetos reais.
-- Preencher a planilha financeira em `financeiro.html`.
-- Configurar o Client ID do Google para ativar Calendar/Drive.
-- Manter os dados atualizados conforme novas informações forem compartilhadas com o agente.
+Para backup ou para usar em outro aparelho, clique em **Backup** na barra lateral:
+
+- **Exportar** gera um arquivo `.json` com tudo
+- **Importar** restaura esse arquivo em qualquer navegador
+
+Vale exportar de tempos em tempos — limpar os dados de navegação do navegador apaga o que está salvo.
+
+### Tema
+
+O botão **Tema** alterna entre automático (segue o sistema), claro e escuro.
+
+## Conectar ao Google Calendar e Drive
+
+Opcional. Habilita ver os próximos eventos da agenda (Faculdade) e os arquivos recentes do Drive
+(Financeiro).
+
+1. Em <https://console.cloud.google.com/apis/credentials>, crie um projeto.
+2. Em **APIs e serviços → Biblioteca**, ative **Google Calendar API** e **Google Drive API**.
+3. Configure a **tela de consentimento OAuth** (tipo Externo) e adicione seu e-mail como usuário de teste.
+4. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha **Aplicativo da Web** e, em
+   *Origens JavaScript autorizadas*, informe a origem de onde você abre o painel — por exemplo
+   `https://luizftc5-debug.github.io` ou `http://localhost:8000`.
+5. Copie o Client ID e cole em `dashboard/config.js`, no lugar de `SEU_CLIENT_ID_AQUI`.
+
+Se algo estiver faltando, o botão "Conectar ao Google" abre uma caixa dizendo exatamente o que
+corrigir — inclusive mostrando a origem que precisa ser registrada.
+
+## Estrutura
+
+```
+dashboard/
+  index.html      home.js         visão geral
+  financeiro.html financeiro.js   lançamentos, gráficos e metas
+  faculdade.html  faculdade.js    disciplinas, provas e entregas
+  projetos.html   projetos.js     projetos por etapas e oportunidades
+  store.js                        dados: localStorage, CRUD e backup
+  ui.js                           modais, avisos, gráficos, datas
+  theme.css                       design system (claro/escuro)
+  config.js       google-integration.js   integração com o Google
+  data.js                         conteúdo inicial (lido só na 1ª abertura)
+```
+
+O arquivo `CLAUDE.md` traz as instruções do agente que acompanha este repositório.

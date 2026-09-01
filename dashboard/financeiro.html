@@ -3,100 +3,113 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Financeiro - Organização Pessoal</title>
-  <link rel="stylesheet" href="shared.css" />
+  <title>Financeiro · Organizador</title>
+  <link rel="stylesheet" href="theme.css" />
   <script src="config.js"></script>
 </head>
 <body>
-  <nav class="sidebar" id="sidebar"></nav>
+  <div class="app">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main">
+      <div class="wrap">
+        <header class="topbar">
+          <div>
+            <h1>Financeiro</h1>
+            <p class="sub">Receitas, despesas, metas e documentos do Drive.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn" id="btn-meta">+ Meta</button>
+            <button class="btn primary" id="btn-lancamento">+ Lançamento</button>
+          </div>
+        </header>
 
-  <main class="main">
-    <div class="page-header">
-      <div>
-        <h1><span class="dot financeiro"></span> Financeiro</h1>
-        <p class="subtitle">Planilha de receitas e despesas, metas e integração com o Google Drive.</p>
-      </div>
-      <div class="updated" id="updated"></div>
-    </div>
+        <div class="grid g4" style="margin-bottom:14px;">
+          <div class="card">
+            <div class="stat-label">Saldo atual</div>
+            <div class="stat-value num" id="s-saldo">—</div>
+            <button class="btn ghost sm" id="btn-saldo" style="margin-top:6px;">Ajustar</button>
+          </div>
+          <div class="card">
+            <div class="stat-label">Receitas do mês</div>
+            <div class="stat-value num" id="s-receitas">—</div>
+            <div class="stat-sub" id="s-receitas-d"></div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Despesas do mês</div>
+            <div class="stat-value num" id="s-despesas">—</div>
+            <div class="stat-sub" id="s-despesas-d"></div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Resultado do mês</div>
+            <div class="stat-value num" id="s-resultado">—</div>
+            <div class="stat-sub" id="s-resultado-d"></div>
+          </div>
+        </div>
 
-    <div class="grid" style="margin-bottom:24px;">
-      <div class="card">
-        <h2>Saldo atual</h2>
-        <div class="big-stat" id="stat-saldo">-</div>
-      </div>
-      <div class="card">
-        <h2>Receitas (mês atual)</h2>
-        <div class="big-stat" id="stat-receitas">-</div>
-      </div>
-      <div class="card">
-        <h2>Despesas (mês atual)</h2>
-        <div class="big-stat" id="stat-despesas">-</div>
-      </div>
-      <div class="card">
-        <h2>Resultado do mês</h2>
-        <div class="big-stat" id="stat-resultado">-</div>
-      </div>
-    </div>
+        <div class="grid g2">
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">Receitas e despesas por mês</h2>
+              <span class="card-note">últimos 6 meses</span>
+            </div>
+            <div id="grafico-meses"></div>
+          </section>
 
-    <div class="two-col" style="margin-bottom:24px;">
-      <div class="card">
-        <h2>Gastos por categoria (mês atual)</h2>
-        <div id="categoria-bars"></div>
-      </div>
-      <div class="card">
-        <h2>Metas financeiras</h2>
-        <div id="metas-list"></div>
-      </div>
-    </div>
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title"><span class="swatch projetos"></span>Gastos por categoria</h2>
+              <span class="card-note" id="cat-periodo"></span>
+            </div>
+            <div id="grafico-categorias"></div>
+          </section>
+        </div>
 
-    <div class="section">
-      <div class="section-title">Planilha de lançamentos</div>
-      <div class="btn-row">
-        <button class="btn primary" id="add-row">+ Novo lançamento</button>
-        <button class="btn" id="export-json">Exportar (JSON)</button>
-        <label class="btn" style="cursor:pointer;">
-          Importar (JSON)
-          <input type="file" id="import-json" accept="application/json" style="display:none;" />
-        </label>
-        <select id="month-filter" class="btn" style="cursor:pointer;"></select>
-      </div>
-      <div class="table-wrap">
-        <table class="sheet" id="sheet">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Tipo</th>
-              <th>Categoria</th>
-              <th>Descrição</th>
-              <th>Forma de pagamento</th>
-              <th>Status</th>
-              <th>Valor (R$)</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="sheet-body"></tbody>
-          <tfoot>
-            <tr class="totals-row">
-              <td colspan="6">Total do período filtrado</td>
-              <td id="sheet-total" colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Metas</h2>
+          </div>
+          <div class="card"><div id="metas"></div></div>
+        </section>
 
-    <div class="section">
-      <div class="section-title">Google Drive — documentos financeiros</div>
-      <div class="card">
-        <div class="google-status" id="google-status">○ Não conectado ao Google</div>
-        <button class="btn primary" id="google-connect-btn">Conectar ao Google</button>
-        <div id="google-drive-list" style="margin-top:12px;"></div>
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Lançamentos</h2>
+            <span class="card-note" id="resumo-filtro"></span>
+          </div>
+
+          <div class="filters">
+            <input class="input" type="search" id="f-busca" placeholder="Buscar descrição…" />
+            <select class="input" id="f-mes"></select>
+            <select class="input" id="f-tipo">
+              <option value="todos">Todos os tipos</option>
+              <option value="receita">Só receitas</option>
+              <option value="despesa">Só despesas</option>
+            </select>
+            <select class="input" id="f-categoria"></select>
+            <button class="btn ghost sm" id="f-limpar">Limpar filtros</button>
+          </div>
+
+          <div id="tabela"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Google Drive</h2>
+            <span class="google-state" id="google-status"><span class="google-dot"></span><span id="google-texto">Não conectado</span></span>
+          </div>
+          <div class="card">
+            <p class="card-note" style="margin:0 0 12px;">Conecte para listar seus documentos financeiros mais recentes do Drive.</p>
+            <button class="btn" id="google-connect-btn">Conectar ao Google</button>
+            <div id="google-drive-list" style="margin-top:12px;"></div>
+          </div>
+        </section>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 
   <script src="data.js"></script>
-  <script src="shared.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
   <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
   <script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
   <script src="google-integration.js"></script>

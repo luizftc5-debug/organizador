@@ -1,91 +1,188 @@
-// Integração com Google Calendar e Google Drive via OAuth (client-side).
-//
-// Requisitos para funcionar:
-// 1. Preencha GOOGLE_CONFIG.CLIENT_ID em config.js (veja instruções lá)
-// 2. Abra o dashboard via servidor local (http://localhost:...), não como
-//    arquivo file:// — o Google não permite login OAuth em páginas file://
-//
-// Depois de conectado, busca os próximos eventos do Calendar e os arquivos
-// recentes do Drive e injeta nos elementos com id #google-calendar-list e
-// #google-drive-list (quando existirem na página).
+/* ===========================================================================
+   Integração com Google Calendar e Google Drive (OAuth no próprio navegador).
 
-let gapiInited = false;
-let gisInited = false;
+   Requisitos:
+   1. Preencher GOOGLE_CONFIG.CLIENT_ID em config.js
+   2. Abrir a página por http:// ou https:// (o Google bloqueia file://)
+   3. Registrar a origem exata da página no Google Cloud Console
+
+   Quando algo falta, o botão explica o que fazer e mostra a origem exata que
+   precisa ser colada no console do Google.
+   =========================================================================== */
+
+let gapiPronto = false;
+let gisPronto = false;
 let tokenClient = null;
-let accessToken = null;
+let tokenAcesso = null;
 
-function updateGoogleStatus(connected) {
-  const el = document.getElementById("google-status");
-  if (!el) return;
-  if (connected) {
-    el.textContent = "● Conectado ao Google";
-    el.classList.add("connected");
-  } else {
-    el.textContent = "○ Não conectado ao Google";
-    el.classList.remove("connected");
-  }
+function origemAtual() {
+  return window.location.origin && window.location.origin !== "null"
+    ? window.location.origin
+    : null;
 }
 
-function isClientIdConfigured() {
+function clientIdConfigurado() {
   return (
     typeof GOOGLE_CONFIG !== "undefined" &&
-    GOOGLE_CONFIG.CLIENT_ID &&
-    !GOOGLE_CONFIG.CLIENT_ID.startsWith("SEU_CLIENT_ID")
+    typeof GOOGLE_CONFIG.CLIENT_ID === "string" &&
+    GOOGLE_CONFIG.CLIENT_ID.trim().endsWith(".apps.googleusercontent.com") &&
+    !GOOGLE_CONFIG.CLIENT_ID.includes("SEU_CLIENT_ID")
   );
 }
 
-function initGapiClient() {
-  gapi.client
-    .init({})
-    .then(() => {
-      return Promise.all([
-        gapi.client.load("https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"),
-        gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"),
-      ]);
-    })
-    .then(() => {
-      gapiInited = true;
-    });
+function atualizarEstado(conectado, texto) {
+  const box = document.getElementById("google-status");
+  const label = document.getElementById("google-texto");
+  if (!box || !label) return;
+  box.classList.toggle("on", conectado);
+  label.textContent = texto || (conectado ? "Conectado" : "Não conectado");
 }
 
+/* ----------------------- Carregamento das bibliotecas --------------------- */
+
 function onGapiLoad() {
-  gapi.load("client", initGapiClient);
+  if (typeof gapi === "undefined") return;
+  gapi.load("client", () => {
+    gapi.client
+      .init({})
+      .then(() =>
+        Promise.all([
+          gapi.client.load("https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"),
+          gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"),
+        ])
+      )
+      .then(() => { gapiPronto = true; })
+      .catch((e) => console.warn("Falha ao carregar as APIs do Google.", e));
+  });
 }
 
 function onGisLoad() {
-  if (!isClientIdConfigured()) return;
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CONFIG.CLIENT_ID,
-    scope: GOOGLE_CONFIG.SCOPES,
-    callback: (resp) => {
-      if (resp.error) {
-        console.error("Erro de autenticação Google", resp);
-        return;
-      }
-      accessToken = resp.access_token;
-      updateGoogleStatus(true);
-      fetchCalendarEvents();
-      fetchDriveFiles();
+  if (typeof google === "undefined" || !clientIdConfigurado()) return;
+  try {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CONFIG.CLIENT_ID.trim(),
+      scope: GOOGLE_CONFIG.SCOPES,
+      callback: (resp) => {
+        if (resp.error) {
+          atualizarEstado(false, "Falha na autorização");
+          explicarErro(resp);
+          return;
+        }
+        tokenAcesso = resp.access_token;
+        gapi.client.setToken({ access_token: tokenAcesso });
+        atualizarEstado(true, "Conectado ao Google");
+        buscarEventos();
+        buscarArquivos();
+      },
+    });
+    gisPronto = true;
+  } catch (e) {
+    console.error("Não foi possível iniciar o login do Google.", e);
+  }
+}
+
+/* -------------------------------- Conexão --------------------------------- */
+
+function conectarGoogle() {
+  const origem = origemAtual();
+
+  if (window.location.protocol === "file:") {
+    return ajuda({
+      titulo: "Abra o painel por um servidor",
+      passos: [
+        "O Google não permite login em páginas abertas direto do arquivo (file://).",
+        "Use o link publicado no GitHub Pages, ou rode um servidor local: abra o terminal na pasta dashboard e execute python -m http.server 8000.",
+        "Depois acesse http://localhost:8000 e tente conectar de novo.",
+      ],
+    });
+  }
+
+  if (!clientIdConfigurado()) {
+    return ajuda({
+      titulo: "Falta configurar o Client ID",
+      passos: [
+        "Abra o arquivo dashboard/config.js.",
+        'Substitua o texto "SEU_CLIENT_ID_AQUI.apps.googleusercontent.com" pelo Client ID criado no Google Cloud Console.',
+        "O valor precisa terminar em .apps.googleusercontent.com — cole ele inteiro, sem espaços.",
+        "Salve o arquivo, envie a alteração (commit e push) e recarregue esta página.",
+      ],
+      origem,
+    });
+  }
+
+  if (!gapiPronto || !gisPronto) {
+    return ajuda({
+      titulo: "As bibliotecas do Google ainda estão carregando",
+      passos: [
+        "Espere alguns segundos e clique em conectar novamente.",
+        "Se a mensagem continuar, verifique sua conexão — as bibliotecas vêm dos servidores do Google.",
+      ],
+    });
+  }
+
+  tokenClient.requestAccessToken({ prompt: tokenAcesso ? "" : "consent" });
+}
+
+function explicarErro(resp) {
+  const origem = origemAtual();
+  const codigo = resp?.error || "";
+
+  if (codigo === "popup_closed_by_user" || codigo === "access_denied") {
+    return ajuda({
+      titulo: "Autorização cancelada",
+      passos: [
+        "A janela do Google foi fechada antes de concluir.",
+        "Clique em conectar de novo e aceite as permissões de leitura da agenda e do Drive.",
+        "Se o Google avisar que o app não é verificado, entre em “Avançado” e siga assim mesmo — o app é seu.",
+      ],
+    });
+  }
+
+  ajuda({
+    titulo: "O Google recusou a conexão",
+    passos: [
+      "O motivo mais comum é a origem desta página não estar registrada no seu projeto do Google Cloud.",
+      "Abra console.cloud.google.com/apis/credentials, clique no seu ID do cliente OAuth e adicione a origem abaixo em “Origens JavaScript autorizadas”.",
+      "Confirme também que as APIs Google Calendar e Google Drive estão ativadas, e que seu e-mail está como usuário de teste na tela de consentimento.",
+      "As alterações no Google podem levar alguns minutos para valer.",
+    ],
+    origem,
+    detalhe: codigo ? `Código do erro: ${codigo}` : "",
+  });
+}
+
+// Caixa de ajuda com a origem exata que precisa ser registrada no Google.
+function ajuda({ titulo, passos, origem, detalhe }) {
+  const html = `
+    <div class="modal-head">
+      <h2 class="modal-title">${UI.fmt.escape(titulo)}</h2>
+    </div>
+    <div class="modal-body">
+      <ol style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--ink-2);">
+        ${passos.map((p) => `<li>${UI.fmt.escape(p)}</li>`).join("")}
+      </ol>
+      ${origem ? `
+        <div class="field">
+          <label>Origem desta página (copie para o Google Cloud)</label>
+          <input class="input" readonly value="${UI.fmt.escape(origem)}" data-origem />
+          <span class="hint">Cole exatamente assim, sem barra no final.</span>
+        </div>` : ""}
+      ${detalhe ? `<p class="card-note" style="margin:0;">${UI.fmt.escape(detalhe)}</p>` : ""}
+    </div>
+    <div class="modal-foot"><button class="btn primary" data-fechar type="button">Entendi</button></div>`;
+
+  UI.abrirModal(html, {
+    aoMontar(modal, fechar) {
+      const campo = modal.querySelector("[data-origem]");
+      if (campo) campo.addEventListener("focus", () => campo.select());
+      modal.querySelector("[data-fechar]").addEventListener("click", () => fechar(null));
     },
   });
-  gisInited = true;
 }
 
-function connectGoogle() {
-  if (!isClientIdConfigured()) {
-    alert(
-      "Configure o CLIENT_ID em dashboard/config.js antes de conectar. Veja as instruções nesse arquivo."
-    );
-    return;
-  }
-  if (!gapiInited || !gisInited) {
-    alert("Bibliotecas do Google ainda carregando, tente novamente em alguns segundos.");
-    return;
-  }
-  tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
-}
+/* ------------------------------- Consultas -------------------------------- */
 
-function fetchCalendarEvents() {
+function buscarEventos() {
   const el = document.getElementById("google-calendar-list");
   if (!el) return;
   gapi.client.calendar.events
@@ -98,65 +195,74 @@ function fetchCalendarEvents() {
       orderBy: "startTime",
     })
     .then((resp) => {
-      const events = resp.result.items || [];
-      if (events.length === 0) {
-        el.innerHTML = `<div class="empty">Nenhum evento futuro encontrado.</div>`;
+      const eventos = resp.result.items || [];
+      el.innerHTML = "";
+      if (!eventos.length) {
+        el.appendChild(UI.vazio({ icone: "◷", titulo: "Nenhum evento futuro", texto: "Sua agenda do Google não tem eventos nos próximos dias." }));
         return;
       }
       const ul = document.createElement("ul");
       ul.className = "list";
-      events.forEach((ev) => {
-        const start = ev.start.dateTime || ev.start.date;
+      eventos.forEach((ev) => {
+        const inicio = ev.start.dateTime || ev.start.date;
+        const dia = inicio.slice(0, 10);
+        const u = UI.urgencia(dia);
+        const hora = ev.start.dateTime
+          ? new Date(inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+          : "dia inteiro";
         const li = document.createElement("li");
-        li.innerHTML = `<span>${ev.summary || "(sem título)"}</span><span class="date">${new Date(
-          start
-        ).toLocaleString("pt-BR")}</span>`;
+        li.innerHTML = `
+          <span class="grow">
+            <span class="title">${UI.fmt.escape(ev.summary || "(sem título)")}</span>
+            <span class="meta">${UI.fmt.data(dia)} · ${hora}</span>
+          </span>
+          <span class="badge ${u.nivel}">${u.rotulo}</span>`;
         ul.appendChild(li);
       });
-      el.innerHTML = "";
       el.appendChild(ul);
     })
     .catch((err) => {
-      el.innerHTML = `<div class="empty">Erro ao buscar eventos do Calendar.</div>`;
       console.error(err);
+      el.innerHTML = `<p class="card-note">Não foi possível ler a agenda. Verifique se a Google Calendar API está ativada no seu projeto.</p>`;
     });
 }
 
-function fetchDriveFiles() {
+function buscarArquivos() {
   const el = document.getElementById("google-drive-list");
   if (!el) return;
   gapi.client.drive.files
     .list({
       pageSize: 10,
       orderBy: "modifiedTime desc",
-      fields: "files(id, name, modifiedTime, webViewLink, iconLink)",
+      fields: "files(id, name, modifiedTime, webViewLink)",
     })
     .then((resp) => {
-      const files = resp.result.files || [];
-      if (files.length === 0) {
-        el.innerHTML = `<div class="empty">Nenhum arquivo encontrado.</div>`;
+      const arquivos = resp.result.files || [];
+      el.innerHTML = "";
+      if (!arquivos.length) {
+        el.appendChild(UI.vazio({ icone: "◫", titulo: "Nenhum arquivo encontrado", texto: "Não há arquivos recentes na conta conectada." }));
         return;
       }
       const ul = document.createElement("ul");
       ul.className = "list";
-      files.forEach((f) => {
+      arquivos.forEach((f) => {
         const li = document.createElement("li");
-        li.innerHTML = `<a href="${f.webViewLink}" target="_blank" rel="noopener">${f.name}</a><span class="date">${new Date(
-          f.modifiedTime
-        ).toLocaleDateString("pt-BR")}</span>`;
+        li.innerHTML = `
+          <span class="grow">
+            <a class="title" href="${UI.fmt.escape(f.webViewLink)}" target="_blank" rel="noopener">${UI.fmt.escape(f.name)}</a>
+            <span class="meta">modificado em ${new Date(f.modifiedTime).toLocaleDateString("pt-BR")}</span>
+          </span>`;
         ul.appendChild(li);
       });
-      el.innerHTML = "";
       el.appendChild(ul);
     })
     .catch((err) => {
-      el.innerHTML = `<div class="empty">Erro ao buscar arquivos do Drive.</div>`;
       console.error(err);
+      el.innerHTML = `<p class="card-note">Não foi possível ler o Drive. Verifique se a Google Drive API está ativada no seu projeto.</p>`;
     });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  updateGoogleStatus(false);
-  const btn = document.getElementById("google-connect-btn");
-  if (btn) btn.addEventListener("click", connectGoogle);
+  atualizarEstado(false);
+  document.getElementById("google-connect-btn")?.addEventListener("click", conectarGoogle);
 });

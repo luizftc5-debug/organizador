@@ -1,230 +1,360 @@
-(function () {
-  renderSidebar("financeiro");
-  document.getElementById("updated").textContent = `Atualizado em ${formatDate(DATA.atualizadoEm)}`;
+/* Financeiro — planilha de lançamentos, gráficos e metas. */
 
-  const CATEGORIAS = DATA.financeiro.categorias || ["Outros"];
-  let transacoes = loadTransacoes();
+(() => {
+  UI.iniciarPagina("financeiro");
 
-  function currentMonthKey() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const { fmt } = UI;
+  const filtros = { busca: "", mes: UI.mesAtual(), tipo: "todos", categoria: "todas" };
+
+  /* ------------------------------- Consultas -------------------------------- */
+
+  const transacoes = () => Store.lista("financeiro.transacoes");
+
+  function doMes(chave) {
+    return transacoes().filter((t) => (t.data || "").startsWith(chave));
   }
 
-  function monthKeyOf(iso) {
-    return iso ? iso.slice(0, 7) : "";
+  function totais(lista) {
+    const receita = lista.filter((t) => t.tipo === "receita").reduce((s, t) => s + (Number(t.valor) || 0), 0);
+    const despesa = lista.filter((t) => t.tipo === "despesa").reduce((s, t) => s + (Number(t.valor) || 0), 0);
+    return { receita, despesa, resultado: receita - despesa };
   }
 
-  function uid() {
-    return `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  function mesesDisponiveis() {
+    const set = new Set(transacoes().map((t) => (t.data || "").slice(0, 7)).filter(Boolean));
+    set.add(UI.mesAtual());
+    return [...set].sort();
   }
 
-  function populateMonthFilter() {
-    const select = document.getElementById("month-filter");
-    const months = Array.from(new Set(transacoes.map((t) => monthKeyOf(t.data)).filter(Boolean))).sort();
-    const cur = currentMonthKey();
-    if (!months.includes(cur)) months.push(cur);
-    months.sort();
-    select.innerHTML = `<option value="todos">Todos os meses</option>` +
-      months.map((m) => `<option value="${m}" ${m === cur ? "selected" : ""}>${m}</option>`).join("");
+  function ultimosSeisMeses() {
+    const meses = [];
+    let chave = UI.mesAtual();
+    for (let i = 0; i < 6; i++) {
+      meses.unshift(chave);
+      chave = UI.mesAnterior(chave);
+    }
+    return meses.map((c) => {
+      const t = totais(doMes(c));
+      return { chave: c, receita: t.receita, despesa: t.despesa };
+    });
   }
 
-  function filteredTransacoes() {
-    const filter = document.getElementById("month-filter").value;
-    if (filter === "todos") return transacoes;
-    return transacoes.filter((t) => monthKeyOf(t.data) === filter);
+  function filtradas() {
+    const busca = filtros.busca.toLowerCase();
+    return transacoes()
+      .filter((t) => (filtros.mes === "todos" ? true : (t.data || "").startsWith(filtros.mes)))
+      .filter((t) => (filtros.tipo === "todos" ? true : t.tipo === filtros.tipo))
+      .filter((t) => (filtros.categoria === "todas" ? true : t.categoria === filtros.categoria))
+      .filter((t) => (busca ? (t.descricao || "").toLowerCase().includes(busca) : true))
+      .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   }
 
-  function renderSummary() {
-    const filter = document.getElementById("month-filter").value;
-    const monthKey = filter === "todos" ? currentMonthKey() : filter;
-    const monthItems = transacoes.filter((t) => monthKeyOf(t.data) === monthKey);
-    const receitas = sum(monthItems.filter((t) => t.tipo === "receita"), "valor");
-    const despesas = sum(monthItems.filter((t) => t.tipo === "despesa"), "valor");
+  /* --------------------------------- Render --------------------------------- */
 
-    document.getElementById("stat-saldo").textContent = formatCurrency(DATA.financeiro.saldoAtual);
-    document.getElementById("stat-receitas").textContent = formatCurrency(receitas);
-    document.getElementById("stat-despesas").textContent = formatCurrency(despesas);
-    const resultado = receitas - despesas;
-    const resultadoEl = document.getElementById("stat-resultado");
-    resultadoEl.textContent = formatCurrency(resultado);
-    resultadoEl.style.color = resultado >= 0 ? "var(--financeiro)" : "var(--alert)";
+  function render() {
+    const e = Store.estado();
+    const mes = UI.mesAtual();
+    const atual = totais(doMes(mes));
+    const anterior = totais(doMes(UI.mesAnterior(mes)));
 
-    renderCategoriaBars(monthItems.filter((t) => t.tipo === "despesa"), despesas);
+    document.getElementById("s-saldo").textContent = fmt.moeda(e.financeiro.saldoAtual);
+    document.getElementById("s-receitas").textContent = fmt.moeda(atual.receita);
+    document.getElementById("s-despesas").textContent = fmt.moeda(atual.despesa);
+
+    const res = document.getElementById("s-resultado");
+    res.textContent = fmt.moeda(atual.resultado);
+    res.className = `stat-value num delta ${atual.resultado >= 0 ? "up" : "down"}`;
+    document.getElementById("s-resultado-d").textContent =
+      atual.resultado >= 0 ? "Você fechou o mês no positivo" : "Saiu mais do que entrou";
+
+    delta("s-receitas-d", atual.receita, anterior.receita, true);
+    delta("s-despesas-d", atual.despesa, anterior.despesa, false);
+
+    UI.colunasMensais(document.getElementById("grafico-meses"), { meses: ultimosSeisMeses() });
+    renderCategorias();
+    renderMetas();
+    renderFiltros();
+    renderTabela();
+    UI.montarLayout("financeiro");
   }
 
-  function renderCategoriaBars(despesaItems, total) {
-    const el = document.getElementById("categoria-bars");
-    el.innerHTML = "";
-    if (despesaItems.length === 0) {
-      el.innerHTML = `<div class="empty">Sem despesas no período.</div>`;
+  // Comparação com o mês anterior. Em despesas, subir é ruim; em receitas, bom.
+  function delta(id, atual, anterior, subirEhBom) {
+    const el = document.getElementById(id);
+    if (!anterior) { el.textContent = "Sem base de comparação"; el.className = "stat-sub"; return; }
+    const dif = atual - anterior;
+    const pct = Math.round((dif / anterior) * 100);
+    if (dif === 0) { el.textContent = "Igual ao mês anterior"; el.className = "stat-sub"; return; }
+    const bom = subirEhBom ? dif > 0 : dif < 0;
+    el.className = `stat-sub delta ${bom ? "up" : "down"}`;
+    el.textContent = `${dif > 0 ? "▲" : "▼"} ${Math.abs(pct)}% vs. mês anterior`;
+  }
+
+  function renderCategorias() {
+    const box = document.getElementById("grafico-categorias");
+    const mes = filtros.mes === "todos" ? UI.mesAtual() : filtros.mes;
+    document.getElementById("cat-periodo").textContent = fmt.mesRotulo(mes);
+
+    const despesas = doMes(mes).filter((t) => t.tipo === "despesa");
+    if (!despesas.length) {
+      box.innerHTML = "";
+      box.appendChild(UI.vazio({ icone: "◍", titulo: "Sem despesas no período", texto: "Os gastos aparecem aqui agrupados por categoria." }));
       return;
     }
-    const byCat = {};
-    despesaItems.forEach((t) => {
-      byCat[t.categoria] = (byCat[t.categoria] || 0) + Number(t.valor || 0);
+
+    const porCategoria = {};
+    despesas.forEach((t) => {
+      porCategoria[t.categoria || "Outros"] = (porCategoria[t.categoria || "Outros"] || 0) + (Number(t.valor) || 0);
     });
-    Object.entries(byCat)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([cat, val]) => {
-        const pct = total ? (val / total) * 100 : 0;
-        const row = document.createElement("div");
-        row.style.marginBottom = "10px";
-        row.innerHTML = `
-          <div class="stat-row" style="border:none; padding:2px 0;"><span class="label">${cat}</span><span class="value">${formatCurrency(val)}</span></div>
-          <div class="bar-bg"><div class="bar-fill financeiro" style="width:${pct}%"></div></div>
-        `;
-        el.appendChild(row);
-      });
+
+    const linhas = Object.entries(porCategoria)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+
+    UI.barras(box, { linhas, cor: "var(--s-projetos)" });
   }
 
   function renderMetas() {
-    const el = document.getElementById("metas-list");
-    el.innerHTML = "";
-    if (DATA.financeiro.metas.length === 0) {
-      el.innerHTML = `<div class="empty">Sem metas cadastradas. Edite dashboard/data.js.</div>`;
+    const box = document.getElementById("metas");
+    const metas = Store.lista("financeiro.metas");
+    box.innerHTML = "";
+
+    if (!metas.length) {
+      box.appendChild(
+        UI.vazio({
+          icone: "◎",
+          titulo: "Nenhuma meta ainda",
+          texto: "Defina um objetivo (reserva de emergência, notebook, viagem) e acompanhe o quanto já juntou.",
+          rotuloAcao: "Criar primeira meta",
+          aoAcionar: novaMeta,
+        })
+      );
       return;
     }
-    DATA.financeiro.metas.forEach((m) => {
-      const pct = m.valorAlvo ? Math.min(100, (m.valorAtual / m.valorAlvo) * 100) : 0;
-      const wrap = document.createElement("div");
-      wrap.style.marginBottom = "14px";
-      wrap.innerHTML = `
-        <div class="stat-row" style="border:none; padding:2px 0;"><span class="label">${m.descricao}</span><span class="value">${formatCurrency(m.valorAtual)} / ${formatCurrency(m.valorAlvo)}</span></div>
-        <div class="bar-bg"><div class="bar-fill financeiro" style="width:${pct}%"></div></div>
-      `;
-      el.appendChild(wrap);
+
+    metas.forEach((m) => {
+      const linha = document.createElement("div");
+      linha.style.cssText = "display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;";
+
+      const medidor = UI.medidor({
+        rotulo: m.descricao + (m.prazo ? ` · até ${fmt.dataCurta(m.prazo)}` : ""),
+        atual: Number(m.valorAtual) || 0,
+        alvo: Number(m.valorAlvo) || 0,
+      });
+      medidor.style.flex = "1";
+
+      const acoes = document.createElement("div");
+      acoes.className = "row-actions";
+      acoes.style.opacity = "1";
+      acoes.innerHTML = `<button class="btn ghost sm" data-editar>Editar</button><button class="btn ghost sm" data-excluir>Excluir</button>`;
+      acoes.querySelector("[data-editar]").addEventListener("click", () => editarMeta(m));
+      acoes.querySelector("[data-excluir]").addEventListener("click", () => excluir("financeiro.metas", m, "Meta"));
+
+      linha.appendChild(medidor);
+      linha.appendChild(acoes);
+      box.appendChild(linha);
     });
   }
 
-  function renderSheet() {
-    const tbody = document.getElementById("sheet-body");
-    tbody.innerHTML = "";
-    const items = filteredTransacoes().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  function renderFiltros() {
+    const mesSel = document.getElementById("f-mes");
+    const catSel = document.getElementById("f-categoria");
 
-    items.forEach((t) => {
+    mesSel.innerHTML =
+      `<option value="todos">Todos os meses</option>` +
+      mesesDisponiveis().map((m) => `<option value="${m}" ${m === filtros.mes ? "selected" : ""}>${fmt.mesRotulo(m)}</option>`).join("");
+
+    catSel.innerHTML =
+      `<option value="todas">Todas as categorias</option>` +
+      Store.estado().financeiro.categorias
+        .map((c) => `<option value="${fmt.escape(c)}" ${c === filtros.categoria ? "selected" : ""}>${fmt.escape(c)}</option>`)
+        .join("");
+  }
+
+  function renderTabela() {
+    const box = document.getElementById("tabela");
+    const lista = filtradas();
+    const t = totais(lista);
+
+    document.getElementById("resumo-filtro").textContent = lista.length
+      ? `${lista.length} ${lista.length === 1 ? "lançamento" : "lançamentos"} · saldo ${fmt.moeda(t.resultado)}`
+      : "";
+
+    box.innerHTML = "";
+
+    if (!lista.length) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const temAlgum = transacoes().length > 0;
+      card.appendChild(
+        UI.vazio({
+          icone: temAlgum ? "◌" : "＋",
+          titulo: temAlgum ? "Nenhum lançamento com esses filtros" : "Sua planilha está vazia",
+          texto: temAlgum
+            ? "Ajuste ou limpe os filtros para ver os outros lançamentos."
+            : "Registre entradas e saídas para acompanhar o mês, ver os gastos por categoria e comparar com o mês anterior.",
+          rotuloAcao: temAlgum ? "Limpar filtros" : "Registrar primeiro lançamento",
+          aoAcionar: temAlgum ? limparFiltros : novoLancamento,
+        })
+      );
+      box.appendChild(card);
+      return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    wrap.innerHTML = `
+      <table class="sheet">
+        <thead>
+          <tr>
+            <th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th>
+            <th>Status</th><th style="text-align:right;">Valor</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr class="tfoot-row">
+            <td colspan="5">Total filtrado — ${fmt.moeda(t.receita)} entrou, ${fmt.moeda(t.despesa)} saiu</td>
+            <td class="right">${fmt.moeda(t.resultado)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>`;
+
+    const tbody = wrap.querySelector("tbody");
+    lista.forEach((item) => {
+      const receita = item.tipo === "receita";
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><input type="date" value="${t.data || ""}" data-field="data" /></td>
-        <td>
-          <select data-field="tipo">
-            <option value="receita" ${t.tipo === "receita" ? "selected" : ""}>Receita</option>
-            <option value="despesa" ${t.tipo === "despesa" ? "selected" : ""}>Despesa</option>
-          </select>
+        <td class="num muted" style="white-space:nowrap;">${fmt.dataCurta(item.data)}</td>
+        <td><span class="title">${fmt.escape(item.descricao || "(sem descrição)")}</span></td>
+        <td><span class="badge">${fmt.escape(item.categoria || "Outros")}</span></td>
+        <td class="muted">${fmt.escape(item.forma || "—")}</td>
+        <td><span class="badge ${item.status === "pendente" ? "urgente" : "feito"}">${item.status === "pendente" ? "pendente" : "pago"}</span></td>
+        <td class="right" style="color:${receita ? "var(--success-text)" : "var(--ink)"};">
+          ${receita ? "+" : "−"}${fmt.moeda(Math.abs(Number(item.valor) || 0))}
         </td>
         <td>
-          <select data-field="categoria">
-            ${CATEGORIAS.map((c) => `<option value="${c}" ${t.categoria === c ? "selected" : ""}>${c}</option>`).join("")}
-          </select>
-        </td>
-        <td><input type="text" value="${t.descricao || ""}" data-field="descricao" placeholder="Descrição" /></td>
-        <td><input type="text" value="${t.forma || ""}" data-field="forma" placeholder="Pix, cartão..." /></td>
-        <td>
-          <select data-field="status">
-            <option value="pago" ${t.status === "pago" ? "selected" : ""}>Pago</option>
-            <option value="pendente" ${t.status === "pendente" ? "selected" : ""}>Pendente</option>
-          </select>
-        </td>
-        <td><input type="number" step="0.01" value="${t.valor ?? ""}" data-field="valor" /></td>
-        <td><button class="row-remove" title="Remover">✕</button></td>
-      `;
-
-      tr.querySelectorAll("[data-field]").forEach((input) => {
-        input.addEventListener("change", (e) => {
-          const field = e.target.dataset.field;
-          const value = field === "valor" ? Number(e.target.value) : e.target.value;
-          const item = transacoes.find((x) => x.id === t.id);
-          item[field] = value;
-          saveTransacoes(transacoes);
-          if (field === "data" || field === "tipo" || field === "valor") {
-            populateMonthFilter();
-            renderSummary();
-            renderSheetTotal();
-          }
-        });
-      });
-
-      tr.querySelector(".row-remove").addEventListener("click", () => {
-        transacoes = transacoes.filter((x) => x.id !== t.id);
-        saveTransacoes(transacoes);
-        populateMonthFilter();
-        renderAll();
-      });
-
+          <div class="row-actions">
+            <button class="btn ghost sm" data-editar>Editar</button>
+            <button class="btn ghost sm" data-excluir>Excluir</button>
+          </div>
+        </td>`;
+      tr.querySelector("[data-editar]").addEventListener("click", () => editarLancamento(item));
+      tr.querySelector("[data-excluir]").addEventListener("click", () => excluir("financeiro.transacoes", item, "Lançamento"));
       tbody.appendChild(tr);
     });
 
-    if (items.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty">Nenhum lançamento neste período. Clique em "+ Novo lançamento".</td></tr>`;
-    }
-
-    renderSheetTotal();
+    box.appendChild(wrap);
   }
 
-  function renderSheetTotal() {
-    const items = filteredTransacoes();
-    const receitas = sum(items.filter((t) => t.tipo === "receita"), "valor");
-    const despesas = sum(items.filter((t) => t.tipo === "despesa"), "valor");
-    document.getElementById("sheet-total").textContent =
-      `Receitas ${formatCurrency(receitas)} · Despesas ${formatCurrency(despesas)} · Saldo ${formatCurrency(receitas - despesas)}`;
+  /* --------------------------------- Ações ---------------------------------- */
+
+  function camposLancamento() {
+    return [
+      { nome: "tipo", rotulo: "Tipo", tipo: "segmento", opcoes: [{ valor: "despesa", rotulo: "Despesa" }, { valor: "receita", rotulo: "Receita" }] },
+      { nome: "descricao", rotulo: "Descrição", tipo: "text", obrigatorio: true, placeholder: "Ex.: Livro de farmacologia" },
+      { nome: "valor", rotulo: "Valor (R$)", tipo: "dinheiro", obrigatorio: true, placeholder: "0,00" },
+      { nome: "categoria", rotulo: "Categoria", tipo: "select", opcoes: Store.estado().financeiro.categorias },
+      { nome: "data", rotulo: "Data", tipo: "date", obrigatorio: true, valorPadrao: UI.hojeISO() },
+      { nome: "forma", rotulo: "Forma de pagamento", tipo: "text", placeholder: "Pix, cartão, dinheiro…" },
+      { nome: "status", rotulo: "Situação", tipo: "segmento", opcoes: [{ valor: "pago", rotulo: "Pago" }, { valor: "pendente", rotulo: "Pendente" }] },
+    ];
   }
 
-  function renderAll() {
-    renderSummary();
-    renderSheet();
-    renderMetas();
-  }
-
-  document.getElementById("add-row").addEventListener("click", () => {
-    transacoes.push({
-      id: uid(),
-      data: new Date().toISOString().slice(0, 10),
-      tipo: "despesa",
-      categoria: CATEGORIAS[0],
-      descricao: "",
-      forma: "",
-      status: "pendente",
-      valor: 0,
+  async function novoLancamento() {
+    const v = await UI.formulario({
+      titulo: "Novo lançamento",
+      descricao: "Registre uma entrada ou saída de dinheiro.",
+      campos: camposLancamento(),
     });
-    saveTransacoes(transacoes);
-    populateMonthFilter();
-    renderAll();
-  });
+    if (!v) return;
+    Store.inserir("financeiro.transacoes", v);
+    if (filtros.mes !== "todos" && !v.data.startsWith(filtros.mes)) filtros.mes = v.data.slice(0, 7);
+    UI.toast("Lançamento salvo.");
+    render();
+  }
 
-  document.getElementById("month-filter").addEventListener("change", () => {
-    renderSummary();
-    renderSheet();
-  });
+  async function editarLancamento(item) {
+    const v = await UI.formulario({
+      titulo: "Editar lançamento",
+      campos: camposLancamento(),
+      valores: item,
+    });
+    if (!v) return;
+    Store.atualizar("financeiro.transacoes", item.id, v);
+    UI.toast("Lançamento atualizado.");
+    render();
+  }
 
-  document.getElementById("export-json").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(transacoes, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "financeiro-lancamentos.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
+  const camposMeta = () => [
+    { nome: "descricao", rotulo: "Objetivo", tipo: "text", obrigatorio: true, placeholder: "Ex.: Reserva de emergência" },
+    { nome: "valorAlvo", rotulo: "Quanto quer juntar (R$)", tipo: "dinheiro", obrigatorio: true },
+    { nome: "valorAtual", rotulo: "Quanto já tem (R$)", tipo: "dinheiro", valorPadrao: 0 },
+    { nome: "prazo", rotulo: "Prazo", tipo: "date" },
+  ];
 
-  document.getElementById("import-json").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const imported = JSON.parse(reader.result);
-        if (!Array.isArray(imported)) throw new Error("Formato inválido");
-        transacoes = imported;
-        saveTransacoes(transacoes);
-        populateMonthFilter();
-        renderAll();
-      } catch (err) {
-        alert("Arquivo JSON inválido.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  });
+  async function novaMeta() {
+    const v = await UI.formulario({ titulo: "Nova meta", descricao: "Um objetivo financeiro para acompanhar.", campos: camposMeta() });
+    if (!v) return;
+    Store.inserir("financeiro.metas", v);
+    UI.toast("Meta criada.");
+    render();
+  }
 
-  populateMonthFilter();
-  renderAll();
+  async function editarMeta(m) {
+    const v = await UI.formulario({ titulo: "Editar meta", campos: camposMeta(), valores: m });
+    if (!v) return;
+    Store.atualizar("financeiro.metas", m.id, v);
+    UI.toast("Meta atualizada.");
+    render();
+  }
+
+  // Exclusão com desfazer — nada é perdido por um clique errado.
+  function excluir(caminho, item, rotulo) {
+    const indice = Store.indiceDe(caminho, item.id);
+    Store.remover(caminho, item.id);
+    render();
+    UI.toast(`${rotulo} excluído.`, {
+      acaoRotulo: "Desfazer",
+      aoAcionar: () => { Store.restaurar(caminho, item, indice); render(); },
+    });
+  }
+
+  async function ajustarSaldo() {
+    const v = await UI.formulario({
+      titulo: "Ajustar saldo",
+      descricao: "Informe quanto você tem hoje somando contas e dinheiro em espécie.",
+      campos: [{ nome: "saldo", rotulo: "Saldo atual (R$)", tipo: "dinheiro", obrigatorio: true }],
+      valores: { saldo: Store.estado().financeiro.saldoAtual },
+    });
+    if (!v) return;
+    Store.definirSaldo(v.saldo);
+    UI.toast("Saldo atualizado.");
+    render();
+  }
+
+  function limparFiltros() {
+    filtros.busca = "";
+    filtros.mes = "todos";
+    filtros.tipo = "todos";
+    filtros.categoria = "todas";
+    document.getElementById("f-busca").value = "";
+    document.getElementById("f-tipo").value = "todos";
+    render();
+  }
+
+  /* --------------------------------- Eventos -------------------------------- */
+
+  document.getElementById("btn-lancamento").addEventListener("click", novoLancamento);
+  document.getElementById("btn-meta").addEventListener("click", novaMeta);
+  document.getElementById("btn-saldo").addEventListener("click", ajustarSaldo);
+  document.getElementById("f-limpar").addEventListener("click", limparFiltros);
+
+  document.getElementById("f-busca").addEventListener("input", (e) => { filtros.busca = e.target.value; renderTabela(); });
+  document.getElementById("f-mes").addEventListener("change", (e) => { filtros.mes = e.target.value; renderCategorias(); renderTabela(); });
+  document.getElementById("f-tipo").addEventListener("change", (e) => { filtros.tipo = e.target.value; renderTabela(); });
+  document.getElementById("f-categoria").addEventListener("change", (e) => { filtros.categoria = e.target.value; renderTabela(); });
+
+  render();
 })();
