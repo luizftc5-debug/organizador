@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organização Pessoal - Luiz</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Organização Pessoal</h1>
+    <div class="updated" id="updated"></div>
+  </header>
+
+  <nav id="views">
+    <button data-view="status" class="active">Status</button>
+    <button data-view="proximos">Próximos passos</button>
+    <button data-view="oportunidades">Oportunidades</button>
+    <button data-view="financeiro">Análise financeira</button>
+  </nav>
+
+  <div class="alerts" id="alerts"></div>
+  <div id="content"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
