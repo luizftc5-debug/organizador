@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Faculdade - Organização Pessoal</title>
+  <link rel="stylesheet" href="shared.css" />
+  <script src="config.js"></script>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1><span class="dot faculdade"></span> Faculdade</h1>
+        <p class="subtitle">Medicina · disciplinas, provas, TCC/metanálise e agenda acadêmica.</p>
+      </div>
+      <div class="updated" id="updated"></div>
+    </div>
+
+    <div id="alerts"></div>
+
+    <div class="two-col" style="margin-bottom:24px;">
+      <div class="card">
+        <h2>Disciplinas ativas</h2>
+        <ul class="list" id="disciplinas-list"></ul>
+      </div>
+      <div class="card">
+        <h2>Prazos e entregas</h2>
+        <ul class="list" id="prazos-list"></ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Google Calendar — aulas e provas</div>
+      <div class="card">
+        <div class="google-status" id="google-status">○ Não conectado ao Google</div>
+        <button class="btn primary" id="google-connect-btn">Conectar ao Google</button>
+        <div id="google-calendar-list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="shared.js"></script>
+  <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+  <script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
+  <script src="google-integration.js"></script>
+  <script>
+    renderSidebar("faculdade");
+    document.getElementById("updated").textContent = `Atualizado em ${formatDate(DATA.atualizadoEm)}`;
+    renderAlerts("alerts");
+
+    const disciplinasList = document.getElementById("disciplinas-list");
+    if (DATA.faculdade.disciplinas.length === 0) {
+      disciplinasList.innerHTML = `<li class="empty">Sem disciplinas cadastradas. Edite dashboard/data.js.</li>`;
+    } else {
+      DATA.faculdade.disciplinas.forEach((d) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${d.nome} <span class="badge faculdade">${d.status}</span></span><span class="date">${d.proximaAvaliacao ? formatDate(d.proximaAvaliacao) : (d.nota ?? "-")}</span>`;
+        disciplinasList.appendChild(li);
+      });
+    }
+
+    const prazosList = document.getElementById("prazos-list");
+    if (DATA.faculdade.prazos.length === 0) {
+      prazosList.innerHTML = `<li class="empty">Sem prazos cadastrados. Edite dashboard/data.js.</li>`;
+    } else {
+      DATA.faculdade.prazos
+        .slice()
+        .sort((a, b) => a.data.localeCompare(b.data))
+        .forEach((p) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span>${p.descricao} <span class="badge">${p.tipo || ""}</span></span><span class="date">${formatDate(p.data)}</span>`;
+          prazosList.appendChild(li);
+        });
+    }
+  </script>
+</body>
+</html>

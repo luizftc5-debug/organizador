@@ -1,0 +1,454 @@
+:root {
+  --bg: #0b0d12;
+  --bg-elevated: #12151c;
+  --panel: #171b24;
+  --panel-hover: #1d222d;
+  --border: #262b38;
+  --text: #eef0f4;
+  --text-dim: #8b93a3;
+  --text-faint: #5b6272;
+
+  --financeiro: #3ddc97;
+  --financeiro-soft: rgba(61, 220, 151, 0.12);
+  --faculdade: #6a9bff;
+  --faculdade-soft: rgba(106, 155, 255, 0.12);
+  --projetos: #f5a623;
+  --projetos-soft: rgba(245, 166, 35, 0.12);
+  --alert: #ff6b6b;
+  --alert-soft: rgba(255, 107, 107, 0.12);
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --sidebar-w: 220px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(circle at 10% 0%, #141824 0%, var(--bg) 45%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 28px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--accent, var(--faculdade));
+}
+
+.nav-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Main content */
+.main {
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.page-header h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.page-header .subtitle {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0;
+}
+
+.updated {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* Alerts */
+.alert {
+  background: var(--alert-soft);
+  border: 1px solid var(--alert);
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Grid & Cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--panel) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.dot.financeiro { background: var(--financeiro); color: var(--financeiro); }
+.dot.faculdade { background: var(--faculdade); color: var(--faculdade); }
+.dot.projetos { background: var(--projetos); color: var(--projetos); }
+
+/* Link card (home page area shortcuts) */
+.link-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.link-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-faint);
+}
+
+.link-card .big-stat {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+.link-card .go {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Rows / stats */
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-row .label {
+  color: var(--text-dim);
+}
+
+.stat-row .value {
+  font-weight: 600;
+}
+
+.bar-bg {
+  background: var(--border);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 6px;
+}
+
+.bar-fill.financeiro { background: var(--financeiro); }
+.bar-fill.faculdade { background: var(--faculdade); }
+.bar-fill.projetos { background: var(--projetos); }
+
+.empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list li {
+  font-size: 13px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.list li:last-child {
+  border-bottom: none;
+}
+
+.list li .date {
+  color: var(--text-faint);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge.financeiro { background: var(--financeiro-soft); color: var(--financeiro); }
+.badge.faculdade { background: var(--faculdade-soft); color: var(--faculdade); }
+.badge.projetos { background: var(--projetos-soft); color: var(--projetos); }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn:hover {
+  background: var(--panel-hover);
+}
+
+.btn.primary {
+  background: var(--faculdade);
+  border-color: var(--faculdade);
+  color: #0b0d12;
+}
+
+.btn.primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn.danger {
+  color: var(--alert);
+  border-color: var(--alert);
+  background: transparent;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Table (planilha) */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+table.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.sheet th {
+  text-align: left;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+table.sheet td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+table.sheet tr:last-child td {
+  border-bottom: none;
+}
+
+table.sheet input,
+table.sheet select {
+  width: 100%;
+  min-width: 100px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+table.sheet td:nth-child(1) input { min-width: 130px; }
+table.sheet td:nth-child(7) input { min-width: 90px; }
+
+table.sheet input:hover,
+table.sheet select:hover,
+table.sheet input:focus,
+table.sheet select:focus {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+  outline: none;
+}
+
+.row-remove {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 8px;
+}
+
+.row-remove:hover {
+  color: var(--alert);
+}
+
+.totals-row td {
+  font-weight: 700;
+  background: var(--bg-elevated);
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .two-col { grid-template-columns: 1fr; }
+  body { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: relative; }
+  .main { padding: 20px; }
+}
+
+.google-status {
+  font-size: 12px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.google-status.connected {
+  color: var(--financeiro);
+}

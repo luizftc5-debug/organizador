@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projetos - Organização Pessoal</title>
+  <link rel="stylesheet" href="shared.css" />
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1><span class="dot projetos"></span> Projetos</h1>
+        <p class="subtitle">Projetos científicos, side hustles e iniciativas paralelas.</p>
+      </div>
+      <div class="updated" id="updated"></div>
+    </div>
+
+    <div class="grid" id="projetos-grid" style="margin-bottom:24px;"></div>
+
+    <div class="section">
+      <div class="section-title">Oportunidades de ganho</div>
+      <div class="card">
+        <ul class="list" id="oportunidades-list"></ul>
+      </div>
+    </div>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="shared.js"></script>
+  <script>
+    renderSidebar("projetos");
+    document.getElementById("updated").textContent = `Atualizado em ${formatDate(DATA.atualizadoEm)}`;
+
+    const grid = document.getElementById("projetos-grid");
+    if (DATA.projetos.length === 0) {
+      grid.innerHTML = `<div class="card"><div class="empty">Sem projetos cadastrados. Edite dashboard/data.js.</div></div>`;
+    } else {
+      DATA.projetos.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h2><span class="dot projetos"></span>${p.nome}</h2>
+          <div class="stat-row"><span class="label">Status</span><span class="value">${p.status}</span></div>
+          <div class="stat-row"><span class="label">Próximo passo</span><span class="value">${p.proximoPasso || "-"}</span></div>
+          <div class="stat-row"><span class="label">Deadline</span><span class="value">${p.deadline ? formatDate(p.deadline) : "-"}</span></div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    const oportunidadesList = document.getElementById("oportunidades-list");
+    if (DATA.oportunidades.length === 0) {
+      oportunidadesList.innerHTML = `<li class="empty">Sem oportunidades cadastradas ainda.</li>`;
+    } else {
+      DATA.oportunidades.forEach((o) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${o.descricao}</span><span class="badge">${o.area || ""}</span>`;
+        oportunidadesList.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>

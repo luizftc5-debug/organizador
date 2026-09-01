@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financeiro - Organização Pessoal</title>
+  <link rel="stylesheet" href="shared.css" />
+  <script src="config.js"></script>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1><span class="dot financeiro"></span> Financeiro</h1>
+        <p class="subtitle">Planilha de receitas e despesas, metas e integração com o Google Drive.</p>
+      </div>
+      <div class="updated" id="updated"></div>
+    </div>
+
+    <div class="grid" style="margin-bottom:24px;">
+      <div class="card">
+        <h2>Saldo atual</h2>
+        <div class="big-stat" id="stat-saldo">-</div>
+      </div>
+      <div class="card">
+        <h2>Receitas (mês atual)</h2>
+        <div class="big-stat" id="stat-receitas">-</div>
+      </div>
+      <div class="card">
+        <h2>Despesas (mês atual)</h2>
+        <div class="big-stat" id="stat-despesas">-</div>
+      </div>
+      <div class="card">
+        <h2>Resultado do mês</h2>
+        <div class="big-stat" id="stat-resultado">-</div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-bottom:24px;">
+      <div class="card">
+        <h2>Gastos por categoria (mês atual)</h2>
+        <div id="categoria-bars"></div>
+      </div>
+      <div class="card">
+        <h2>Metas financeiras</h2>
+        <div id="metas-list"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Planilha de lançamentos</div>
+      <div class="btn-row">
+        <button class="btn primary" id="add-row">+ Novo lançamento</button>
+        <button class="btn" id="export-json">Exportar (JSON)</button>
+        <label class="btn" style="cursor:pointer;">
+          Importar (JSON)
+          <input type="file" id="import-json" accept="application/json" style="display:none;" />
+        </label>
+        <select id="month-filter" class="btn" style="cursor:pointer;"></select>
+      </div>
+      <div class="table-wrap">
+        <table class="sheet" id="sheet">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Categoria</th>
+              <th>Descrição</th>
+              <th>Forma de pagamento</th>
+              <th>Status</th>
+              <th>Valor (R$)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sheet-body"></tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="6">Total do período filtrado</td>
+              <td id="sheet-total" colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Google Drive — documentos financeiros</div>
+      <div class="card">
+        <div class="google-status" id="google-status">○ Não conectado ao Google</div>
+        <button class="btn primary" id="google-connect-btn">Conectar ao Google</button>
+        <div id="google-drive-list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="shared.js"></script>
+  <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+  <script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
+  <script src="google-integration.js"></script>
+  <script src="financeiro.js"></script>
+</body>
+</html>

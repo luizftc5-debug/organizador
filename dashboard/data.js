@@ -1,6 +1,9 @@
 // Dados do painel de organização pessoal de Luiz.
-// Edite este arquivo manualmente ou peça ao agente para atualizá-lo
-// conforme novas informações forem compartilhadas (financeiro, escola, projetos).
+//
+// Este arquivo serve como "seed" inicial (financeiro.html usa a planilha
+// interativa salva no navegador, mas parte destes dados no primeiro uso).
+// Edite manualmente ou peça ao agente para atualizar conforme novas
+// informações forem compartilhadas.
 //
 // Datas no formato "AAAA-MM-DD".
 
@@ -10,6 +13,17 @@ const DATA = {
   financeiro: {
     saldoAtual: 0,
     moeda: "BRL",
+    categorias: [
+      "Moradia",
+      "Alimentação",
+      "Transporte",
+      "Saúde",
+      "Educação",
+      "Lazer",
+      "Assinaturas",
+      "Renda (side hustle)",
+      "Outros",
+    ],
     receitasMes: [
       // { descricao: "Bolsa de iniciação científica", valor: 0, data: "2026-09-05" }
     ],
@@ -21,7 +35,7 @@ const DATA = {
     ],
   },
 
-  escola: {
+  faculdade: {
     disciplinas: [
       // { nome: "Clínica Médica", status: "ativa", nota: null, proximaAvaliacao: "2026-09-15" }
     ],
@@ -40,6 +54,6 @@ const DATA = {
   ],
 
   oportunidades: [
-    // { descricao: "Curso online sobre metodologia de revisão sistemática", area: "Escola + Financeiro" }
+    // { descricao: "Curso online sobre metodologia de revisão sistemática", area: "Faculdade + Financeiro" }
   ],
 };

@@ -4,25 +4,96 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Organização Pessoal - Luiz</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="shared.css" />
 </head>
 <body>
-  <header>
-    <h1>Organização Pessoal</h1>
-    <div class="updated" id="updated"></div>
-  </header>
+  <nav class="sidebar" id="sidebar"></nav>
 
-  <nav id="views">
-    <button data-view="status" class="active">Status</button>
-    <button data-view="proximos">Próximos passos</button>
-    <button data-view="oportunidades">Oportunidades</button>
-    <button data-view="financeiro">Análise financeira</button>
-  </nav>
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Visão geral</h1>
+        <p class="subtitle">Financeiro, Faculdade e Projetos em um só lugar.</p>
+      </div>
+      <div class="updated" id="updated"></div>
+    </div>
 
-  <div class="alerts" id="alerts"></div>
-  <div id="content"></div>
+    <div id="alerts"></div>
+
+    <div class="grid" id="link-cards"></div>
+
+    <div class="section" style="margin-top:32px;">
+      <div class="section-title"><span class="dot faculdade"></span>Próximos passos (todos os pilares)</div>
+      <div class="card">
+        <ul class="list" id="proximos-list"></ul>
+      </div>
+    </div>
+  </main>
 
   <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="shared.js"></script>
+  <script>
+    renderSidebar("home");
+    document.getElementById("updated").textContent = `Atualizado em ${formatDate(DATA.atualizadoEm)}`;
+    renderAlerts("alerts");
+
+    const receitas = sum(DATA.financeiro.receitasMes, "valor");
+    const despesas = sum(DATA.financeiro.despesasMes, "valor");
+    const proximoDeadlineProjeto = DATA.projetos
+      .filter((p) => p.deadline)
+      .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+
+    const cards = [
+      {
+        href: "financeiro.html",
+        dot: "financeiro",
+        title: "Financeiro",
+        stat: formatCurrency(DATA.financeiro.saldoAtual),
+        detail: `Receitas ${formatCurrency(receitas)} · Despesas ${formatCurrency(despesas)}`,
+      },
+      {
+        href: "faculdade.html",
+        dot: "faculdade",
+        title: "Faculdade",
+        stat: `${DATA.faculdade.disciplinas.length} disciplinas`,
+        detail: `${DATA.faculdade.prazos.length} prazos cadastrados`,
+      },
+      {
+        href: "projetos.html",
+        dot: "projetos",
+        title: "Projetos",
+        stat: `${DATA.projetos.length} em acompanhamento`,
+        detail: proximoDeadlineProjeto
+          ? `Próximo deadline: ${formatDate(proximoDeadlineProjeto.deadline)}`
+          : "Sem deadlines cadastrados",
+      },
+    ];
+
+    const grid = document.getElementById("link-cards");
+    cards.forEach((c) => {
+      const a = document.createElement("a");
+      a.href = c.href;
+      a.className = "card link-card";
+      a.innerHTML = `
+        <h2><span class="dot ${c.dot}"></span>${c.title}</h2>
+        <div class="big-stat">${c.stat}</div>
+        <div class="stat-row" style="border:none; padding:0;"><span class="label">${c.detail}</span></div>
+        <div class="go" style="margin-top:12px;">Ver detalhes →</div>
+      `;
+      grid.appendChild(a);
+    });
+
+    const proximosList = document.getElementById("proximos-list");
+    const proximos = collectDeadlines();
+    if (proximos.length === 0) {
+      proximosList.innerHTML = `<li class="empty">Sem prazos cadastrados ainda.</li>`;
+    } else {
+      proximos.slice(0, 8).forEach((item) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span><span class="badge ${item.area}">${item.area}</span> ${item.desc}</span><span class="date">${formatDate(item.data)}</span>`;
+        proximosList.appendChild(li);
+      });
+    }
+  </script>
 </body>
 </html>
