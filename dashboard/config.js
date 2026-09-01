@@ -17,7 +17,7 @@
 //    - Google Drive API
 
 const GOOGLE_CONFIG = {
-  CLIENT_ID: "SEU_CLIENT_ID_AQUI.apps.googleusercontent.com",
+  CLIENT_ID: "351001418438-cs79h9gvk37247kk77vimlfltfgog5sk.apps.googleusercontent.com",
   SCOPES: [
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/drive.readonly",
