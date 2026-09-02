@@ -31,6 +31,20 @@
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
 
+    // A página abre falando com ele pelo primeiro nome, não com "usuário".
+    const primeiroNome = String(e.perfil?.nome || "").trim().split(/\s+/)[0] || "";
+    const hora = new Date().getHours();
+    const parte = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+    document.getElementById("saudacao").textContent = primeiroNome ? `${parte}, ${primeiroNome}` : "Visão geral";
+
+    const naSemana = UI.compromissos().filter((i) => {
+      const d = UI.diasAte(i.data);
+      return d !== null && d >= 0 && d <= 7;
+    }).length;
+    document.getElementById("sub-resumo").textContent =
+      `${naSemana ? `${naSemana} ${naSemana === 1 ? "compromisso" : "compromissos"}` : "Nenhum compromisso"} nos próximos 7 dias · ` +
+      `${atual.quantidade} ${atual.quantidade === 1 ? "lançamento" : "lançamentos"} neste mês.`;
+
     // Herói: saldo atual (soma das contas, ou o valor informado à mão enquanto
     // não houver contas cadastradas)
     document.getElementById("hero-saldo").textContent = fmt.moeda(Financas.saldoTotal());
@@ -140,10 +154,8 @@
 
     grid.innerHTML = cartoes
       .map((c) => `
-        <a class="card pillar" href="${c.href}">
-          <div class="card-head" style="margin-bottom:8px;">
-            <h2 class="card-title"><span class="swatch ${c.cor}"></span>${c.titulo}</h2>
-          </div>
+        <a class="card pillar ${c.cor}" href="${c.href}">
+          <div class="stat-label">${c.titulo}</div>
           <div class="stat-value num">${c.valor}</div>
           <div class="stat-sub">${c.sub}</div>
           <div class="arrow">Ver detalhes →</div>
@@ -201,7 +213,7 @@
       const pct = anterior.despesa > 0 ? Math.round((dif / anterior.despesa) * 100) : 0;
       const piorou = dif > 0;
       cards.push({
-        titulo: "Gastos vs. mês anterior",
+        titulo: "Gastos vs. mês anterior", cor: "financeiro",
         valor: `${dif >= 0 ? "+" : "−"}${fmt.moeda(Math.abs(dif))}`,
         classe: piorou ? "down" : "up",
         sub: anterior.despesa > 0
@@ -216,7 +228,7 @@
       const media = atual.despesa / diaDoMes;
       const projecao = media * diasNoMes(mes);
       cards.push({
-        titulo: "Projeção de gastos do mês",
+        titulo: "Projeção de gastos do mês", cor: "financeiro",
         valor: fmt.moeda(projecao),
         classe: "flat",
         sub: `No ritmo de ${fmt.moeda(media)} por dia até agora`,
@@ -228,7 +240,7 @@
     if (pendentes.length) {
       const soma = pendentes.filter((t) => t.tipo === "despesa").reduce((s, t) => s + (Number(t.valor) || 0), 0);
       cards.push({
-        titulo: "Contas pendentes",
+        titulo: "Contas pendentes", cor: "financeiro",
         valor: fmt.moeda(soma),
         classe: "down",
         sub: `${pendentes.length} ${pendentes.length === 1 ? "lançamento marcado" : "lançamentos marcados"} como pendente`,
@@ -240,7 +252,7 @@
     if (conflitos.length) {
       const pior = conflitos.reduce((a, b) => (b.itens.length > a.itens.length ? b : a));
       cards.push({
-        titulo: "Semana mais carregada",
+        titulo: "Semana mais carregada", cor: "faculdade",
         valor: `${pior.itens.length} compromissos`,
         classe: pior.multiplasAreas ? "down" : "flat",
         sub: `Semana de ${fmt.data(pior.semana)}${pior.multiplasAreas ? ` · ${pior.areas.join(" + ")}` : ""}`,
@@ -254,7 +266,7 @@
       if (passos.length) {
         const feitos = passos.filter((s) => s.feito).length;
         cards.push({
-          titulo: "Progresso dos projetos",
+          titulo: "Progresso dos projetos", cor: "projetos",
           valor: `${Math.round((feitos / passos.length) * 100)}%`,
           classe: "flat",
           sub: `${feitos} de ${passos.length} etapas concluídas em ${ativos.length} ${ativos.length === 1 ? "projeto" : "projetos"}`,
@@ -281,9 +293,9 @@
 
     box.innerHTML = cards
       .map((c) => `
-        <div class="card">
+        <div class="card tinted ${c.cor || ""}">
           <div class="stat-label">${fmt.escape(c.titulo)}</div>
-          <div class="stat-value num delta ${c.classe}" style="font-size:22px;">${c.valor}</div>
+          <div class="stat-value num delta ${c.classe}" style="font-size:23px;">${c.valor}</div>
           <div class="stat-sub">${fmt.escape(c.sub)}</div>
         </div>`)
       .join("");

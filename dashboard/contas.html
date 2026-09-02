@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contas e cartões · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
@@ -15,6 +16,7 @@
 
         <header class="topbar">
           <div>
+            <div class="eyebrow financeiro">Saldos e faturas</div>
             <h1>Contas e cartões</h1>
             <p class="sub">Quanto você tem em cada conta e quanto deve em cada cartão.</p>
           </div>
@@ -27,17 +29,17 @@
         <div id="avisos"></div>
 
         <div class="grid g3" style="margin-bottom:14px;">
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Total em contas</div>
             <div class="stat-value num" id="s-total">—</div>
             <div class="stat-sub" id="s-total-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Faturas abertas</div>
             <div class="stat-value num" id="s-faturas">—</div>
             <div class="stat-sub" id="s-faturas-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Sobra estimada</div>
             <div class="stat-value num" id="s-sobra">—</div>
             <div class="stat-sub">Contas menos faturas em aberto</div>
@@ -74,6 +76,7 @@
   </div>
 
   <script src="data.js"></script>
+  <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
   <script src="financas.js"></script>

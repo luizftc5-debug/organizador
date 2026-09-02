@@ -98,8 +98,8 @@
               d.professor && `Prof. ${fmt.escape(d.professor)}`,
               `${(d.avaliacoes || []).length} ${(d.avaliacoes || []).length === 1 ? "avaliação" : "avaliações"}`,
               nPrazos ? `${nPrazos} ${nPrazos === 1 ? "prazo aberto" : "prazos abertos"}` : null,
-              (d.materiais || []).length ? `${d.materiais.length} materiais` : null,
-              (d.resumos || []).length ? `${d.resumos.length} resumos` : null,
+              (d.materiais || []).length ? `${d.materiais.length} ${d.materiais.length === 1 ? "material" : "materiais"}` : null,
+              (d.resumos || []).length ? `${d.resumos.length} ${d.resumos.length === 1 ? "resumo" : "resumos"}` : null,
             ].filter(Boolean).join(" · ")}</span>
           </a>
           ${media ? `<span class="nota-chip">${media.media.toFixed(1)}</span>` : ""}

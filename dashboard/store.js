@@ -13,7 +13,15 @@ const Store = (() => {
   const KEY = "organizador.estado.v2";
   const KEY_LEGADO_TRANSACOES = "organizador.financeiro.transacoes.v1";
 
-  const PERFIL_PADRAO = { nome: "Luiz Felipe Tonhá", curso: "Medicina" };
+  const PERFIL_PADRAO = {
+    nome: "Luiz Felipe Tonhá",
+    curso: "Medicina",
+    semestre: "",
+    instituicao: "",
+    cidade: "",
+    email: "",
+    foto: "", // data URL reduzida — ver UI.perfil
+  };
 
   const CATEGORIAS_PADRAO = [
     "Moradia",
@@ -36,7 +44,7 @@ const Store = (() => {
 
   function estadoVazio() {
     return {
-      versao: 3,
+      versao: 4,
       atualizadoEm: new Date().toISOString(),
       perfil: { ...PERFIL_PADRAO },
       financeiro: {
@@ -192,6 +200,10 @@ const Store = (() => {
       const disc = { materiais: [], resumos: [], avaliacoes: [], ...d };
       disc.avaliacoes = [...(disc.avaliacoes || [])];
 
+      // v3 → v4: material e resumo passam a poder carregar arquivos anexados.
+      disc.materiais = (disc.materiais || []).map((m) => ({ anexos: [], ...m }));
+      disc.resumos = (disc.resumos || []).map((r) => ({ anexos: [], ...r }));
+
       if (disc.proximaAvaliacao) {
         disc.avaliacoes.push({ id: uid("av"), nome: "Avaliação", data: disc.proximaAvaliacao, nota: null, peso: 1 });
         delete disc.proximaAvaliacao;
@@ -206,7 +218,7 @@ const Store = (() => {
     out.faculdade.prazos = (e.faculdade?.prazos || []).map((p) => ({ disciplinaId: "", ...p }));
     out.projetos = (Array.isArray(e.projetos) ? e.projetos : []).map((p) => ({ rendaEstimada: null, ...p }));
     out.oportunidades = Array.isArray(e.oportunidades) ? e.oportunidades : [];
-    out.versao = 3;
+    out.versao = 4;
     return out;
   }
 
@@ -311,24 +323,48 @@ const Store = (() => {
       persistir();
     },
 
-    /* ------------------------- Backup completo -------------------------- */
-
-    exportar() {
-      return JSON.stringify(carregar(), null, 2);
+    definirPerfil(patch) {
+      const e = carregar();
+      e.perfil = { ...e.perfil, ...patch };
+      persistir();
+      return e.perfil;
     },
 
-    importar(texto) {
+    /* ------------------------- Backup completo --------------------------
+
+       O .json leva o estado E os anexos (que moram no IndexedDB, não aqui),
+       para um backup sozinho bastar para reconstruir tudo em outro navegador.
+       Por isso exportar/importar são assíncronos. ------------------------- */
+
+    async exportar() {
+      const pacote = { ...carregar() };
+      if (typeof Arquivos !== "undefined" && Arquivos.disponivel) {
+        try { pacote.arquivos = await Arquivos.exportarTodos(); }
+        catch (e) { console.warn("Backup sem os anexos: não foi possível lê-los.", e); }
+      }
+      return JSON.stringify(pacote, null, 2);
+    },
+
+    async importar(texto) {
       const dados = JSON.parse(texto);
       if (!dados || typeof dados !== "object") throw new Error("Arquivo inválido.");
       if (!dados.financeiro && !dados.faculdade && !dados.projetos) {
         throw new Error("Este arquivo não parece ser um backup do Organizador.");
       }
+
+      let anexos = 0;
+      if (Array.isArray(dados.arquivos) && typeof Arquivos !== "undefined" && Arquivos.disponivel) {
+        anexos = await Arquivos.importarTodos(dados.arquivos);
+      }
+      delete dados.arquivos;
+
       estado = normalizar(dados);
       persistir();
-      return estado;
+      return { estado, anexos };
     },
 
-    limpar() {
+    async limpar() {
+      if (typeof Arquivos !== "undefined" && Arquivos.disponivel) await Arquivos.limpar();
       estado = estadoVazio();
       persistir();
       return estado;

@@ -37,10 +37,10 @@
     recarregar();
     document.title = `${disciplina.nome} · Organizador`;
     document.getElementById("titulo").textContent = disciplina.nome;
-    document.getElementById("subtitulo").innerHTML = [
-      disciplina.professor ? `Prof. ${fmt.escape(disciplina.professor)}` : "",
-      `<span class="badge">${fmt.escape(disciplina.status || "ativa")}</span>`,
-    ].filter(Boolean).join(" · ");
+    document.getElementById("etiqueta").textContent = `Disciplina ${disciplina.status || "ativa"}`;
+    document.getElementById("subtitulo").innerHTML = disciplina.professor
+      ? `Prof. ${fmt.escape(disciplina.professor)}`
+      : `<span class="muted">Professor(a) não informado</span>`;
 
     const media = UI.mediaDisciplina(disciplina);
     document.getElementById("s-media").textContent = media ? media.media.toFixed(1) : "—";
@@ -180,7 +180,7 @@
         UI.vazio({
           icone: "◫",
           titulo: "Nenhum material salvo",
-          texto: "Guarde aqui os links que você usa nesta matéria: slides no Drive, artigos, vídeos, listas de exercícios.",
+          texto: "Guarde aqui o que você usa nesta matéria: anexe o PDF dos slides e das listas, ou só cole o link do Drive.",
           rotuloAcao: "Adicionar material",
           aoAcionar: novoMaterial,
         })
@@ -192,21 +192,30 @@
     ul.className = "list";
     lista.forEach((m) => {
       const li = document.createElement("li");
+      li.style.alignItems = "flex-start";
+      const anexos = m.anexos || [];
       const titulo = m.url
         ? `<a class="title" href="${fmt.escape(m.url)}" target="_blank" rel="noopener">${fmt.escape(m.titulo)}</a>`
         : `<span class="title">${fmt.escape(m.titulo)}</span>`;
+      const detalhe = [
+        m.url ? fmt.escape(dominio(m.url)) : "",
+        anexos.length ? `${anexos.length} ${anexos.length === 1 ? "documento anexado" : "documentos anexados"}` : "",
+      ].filter(Boolean).join(" · ");
+
       li.innerHTML = `
-        <span class="badge faculdade">${fmt.escape(m.tipo || "link")}</span>
+        <span class="badge faculdade" style="margin-top:2px;">${fmt.escape(m.tipo || "link")}</span>
         <span class="grow">
           ${titulo}
-          ${m.url ? `<span class="meta">${fmt.escape(dominio(m.url))}</span>` : ""}
+          ${detalhe ? `<span class="meta">${detalhe}</span>` : ""}
+          ${anexos.length ? `<span class="anexos" style="margin-top:8px;">${anexos.map(anexoHTML).join("")}</span>` : ""}
         </span>
         <span class="row-actions">
           <button class="btn ghost sm" data-editar>Editar</button>
           <button class="btn ghost sm" data-excluir>Excluir</button>
         </span>`;
+      ligarAnexos(li, anexos);
       li.querySelector("[data-editar]").addEventListener("click", () => editarMaterial(m));
-      li.querySelector("[data-excluir]").addEventListener("click", () => excluirSub("materiais", m, "Material"));
+      li.querySelector("[data-excluir]").addEventListener("click", () => excluirMaterial(m));
       ul.appendChild(li);
     });
     box.appendChild(ul);
@@ -214,6 +223,30 @@
 
   function dominio(url) {
     try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
+  }
+
+  /* ------------------------------- Anexos ----------------------------------- */
+
+  /** Um documento anexado, como botão que abre/baixa o arquivo. */
+  function anexoHTML(a) {
+    const cls = Arquivos.classificar(a);
+    return `<button class="anexo" type="button" data-abrir="${fmt.escape(a.id)}">
+        <span class="anexo-ic ${cls.classe}">${fmt.escape(cls.rotulo)}</span>
+        <span class="anexo-nome">${fmt.escape(a.nome)}
+          <span class="anexo-meta">${fmt.escape(Arquivos.tamanhoLegivel(a.tamanho))}</span>
+        </span>
+        <span class="muted" style="font-size:11px;">abrir ↗</span>
+      </button>`;
+  }
+
+  function ligarAnexos(raiz, anexos) {
+    raiz.querySelectorAll("[data-abrir]").forEach((el) => {
+      const a = anexos.find((x) => x.id === el.dataset.abrir);
+      el.addEventListener("click", async () => {
+        try { await Arquivos.abrirAnexo(a); }
+        catch (err) { UI.toast(err.message); }
+      });
+    });
   }
 
   function renderResumos() {
@@ -230,7 +263,7 @@
         UI.vazio({
           icone: "✎",
           titulo: "Nenhum resumo escrito",
-          texto: "Escreva resumos por assunto. Ficam salvos neste navegador e entram no backup junto com o resto.",
+          texto: "Escreva resumos por assunto e anexe a foto do quadro ou o artigo. Tudo fica salvo aqui e entra no backup.",
           rotuloAcao: "Escrever resumo",
           aoAcionar: novoResumo,
         })
@@ -255,9 +288,11 @@
             <button class="btn ghost sm" data-excluir>Excluir</button>
           </span>
         </div>
-        <div class="resumo-texto">${fmt.escape(r.conteudo || "")}</div>`;
+        <div class="resumo-texto">${fmt.escape(r.conteudo || "")}</div>
+        ${(r.anexos || []).length ? `<div class="anexos" style="margin-top:14px;">${r.anexos.map(anexoHTML).join("")}</div>` : ""}`;
+      ligarAnexos(card, r.anexos || []);
       card.querySelector("[data-editar]").addEventListener("click", () => editarResumo(r));
-      card.querySelector("[data-excluir]").addEventListener("click", () => excluirSub("resumos", r, "Resumo"));
+      card.querySelector("[data-excluir]").addEventListener("click", () => excluirResumo(r));
       grid.appendChild(card);
     });
     box.appendChild(grid);
@@ -280,13 +315,15 @@
 
   const camposMaterial = () => [
     { nome: "titulo", rotulo: "Título", tipo: "text", obrigatorio: true, placeholder: "Ex.: Slides da aula 4" },
-    { nome: "url", rotulo: "Link", tipo: "text", placeholder: "https://drive.google.com/..." },
     { nome: "tipo", rotulo: "Tipo", tipo: "select", opcoes: ["slides", "artigo", "vídeo", "livro", "exercícios", "link"] },
+    { nome: "url", rotulo: "Link", tipo: "text", placeholder: "https://drive.google.com/..." },
+    { nome: "anexos", rotulo: "Documentos", tipo: "anexos", dica: "PDF, slides, fotos — ficam guardados neste navegador e entram no backup." },
   ];
 
   const camposResumo = () => [
     { nome: "titulo", rotulo: "Título", tipo: "text", obrigatorio: true, placeholder: "Ex.: Insuficiência cardíaca" },
     { nome: "conteudo", rotulo: "Resumo", tipo: "textarea", obrigatorio: true },
+    { nome: "anexos", rotulo: "Documentos", tipo: "anexos", dica: "Anexe a foto do quadro, o PDF do artigo, o mapa mental." },
   ];
 
   async function editarDisciplina() {
@@ -369,6 +406,27 @@
       aoAcionar: () => { Store.subInserir(CAMINHO, id, campo, item); render(); },
     });
   }
+
+  /**
+   * Itens com anexo têm exclusão própria: os arquivos só somem do IndexedDB
+   * quando o "Desfazer" expira, senão desfazer devolveria a ficha sem o PDF.
+   */
+  function excluirComAnexos(campo, item, rotulo) {
+    Store.subRemover(CAMINHO, id, campo, item.id);
+    render();
+    let desfeito = false;
+    UI.toast(`${rotulo} excluído.`, {
+      acaoRotulo: "Desfazer",
+      aoAcionar: () => { desfeito = true; Store.subInserir(CAMINHO, id, campo, item); render(); },
+    });
+    setTimeout(() => {
+      if (desfeito) return;
+      (item.anexos || []).forEach((a) => Arquivos.remover(a.id));
+    }, 6000);
+  }
+
+  const excluirMaterial = (m) => excluirComAnexos("materiais", m, "Material");
+  const excluirResumo = (r) => excluirComAnexos("resumos", r, "Resumo");
 
   document.getElementById("btn-editar").addEventListener("click", editarDisciplina);
   document.getElementById("btn-avaliacao").addEventListener("click", novaAvaliacao);

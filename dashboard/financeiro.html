@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Financeiro · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="theme.css" />
   <script src="config.js"></script>
 </head>
@@ -14,6 +15,7 @@
       <div class="wrap">
         <header class="topbar">
           <div>
+            <div class="eyebrow financeiro">Lançamentos e metas</div>
             <h1>Financeiro</h1>
             <p class="sub">Receitas, despesas, metas e documentos do Drive.</p>
           </div>
@@ -25,23 +27,23 @@
         </header>
 
         <div class="grid g4" style="margin-bottom:14px;">
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Saldo atual</div>
             <div class="stat-value num" id="s-saldo">—</div>
             <div class="stat-sub" id="s-saldo-d"></div>
             <button class="btn ghost sm" id="btn-saldo" style="margin-top:6px;">Ajustar</button>
           </div>
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Receitas do mês</div>
             <div class="stat-value num" id="s-receitas">—</div>
             <div class="stat-sub" id="s-receitas-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Despesas do mês</div>
             <div class="stat-value num" id="s-despesas">—</div>
             <div class="stat-sub" id="s-despesas-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted financeiro">
             <div class="stat-label">Resultado do mês</div>
             <div class="stat-value num" id="s-resultado">—</div>
             <div class="stat-sub" id="s-resultado-d"></div>
@@ -110,6 +112,7 @@
   </div>
 
   <script src="data.js"></script>
+  <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
   <script src="financas.js"></script>

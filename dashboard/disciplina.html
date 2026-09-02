@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Disciplina · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
@@ -15,6 +16,7 @@
 
         <header class="topbar">
           <div>
+            <div class="eyebrow faculdade" id="etiqueta">Disciplina</div>
             <h1 id="titulo">—</h1>
             <p class="sub" id="subtitulo"></p>
           </div>
@@ -25,22 +27,22 @@
         </header>
 
         <div class="grid g4" style="margin-bottom:14px;">
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Média até agora</div>
             <div class="stat-value num" id="s-media">—</div>
             <div class="stat-sub" id="s-media-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Próxima avaliação</div>
             <div class="stat-value" id="s-proxima" style="font-size:17px;">—</div>
             <div class="stat-sub" id="s-proxima-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Prazos em aberto</div>
             <div class="stat-value num" id="s-prazos">—</div>
             <div class="stat-sub" id="s-prazos-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Materiais e resumos</div>
             <div class="stat-value num" id="s-conteudo">—</div>
             <div class="stat-sub" id="s-conteudo-d"></div>
@@ -85,6 +87,7 @@
   </div>
 
   <script src="data.js"></script>
+  <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
   <script src="disciplina.js"></script>

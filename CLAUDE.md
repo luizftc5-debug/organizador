@@ -26,8 +26,9 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 | `disciplina.html` + `disciplina.js` | Página de uma disciplina: avaliações, prazos, materiais e resumos |
 | `projetos.html` + `projetos.js` | Projetos pessoais que geram renda + oportunidades |
 | `store.js` | Camada de dados: localStorage + CRUD + backup em JSON |
+| `arquivos.js` | Anexos (PDF, slides, fotos) no IndexedDB + export/import para o backup |
 | `financas.js` | Cálculos derivados: saldo por conta, ciclo e fatura de cartão, balanço |
-| `ui.js` | Componentes: layout, modais de formulário, avisos, gráficos, datas/urgência |
+| `ui.js` | Componentes: layout, perfil, modais de formulário, avisos, gráficos, datas/urgência |
 | `theme.css` | Design system (tema claro/escuro) |
 | `config.js` + `google-integration.js` | Integração OAuth com Google Calendar e Drive |
 | `data.js` | Conteúdo inicial (seed), lido só na primeira abertura |
@@ -57,6 +58,31 @@ Cada disciplina tem `avaliacoes`, `materiais` e `resumos` como listas dentro del
 `Store.subInserir/subAtualizar/subRemover`. A média é ponderada pelo `peso` das avaliações com nota
 lançada (`UI.mediaDisciplina`). Prazos apontam para a disciplina por `disciplinaId`.
 
+### Perfil do usuário
+
+`estado.perfil` guarda nome, curso, semestre, instituição, cidade, e-mail e `foto`. A foto é uma
+data URL: `UI.redimensionarFoto` recorta o centro em quadrado e reduz para 256px em JPEG antes de
+salvar, para caber com folga no localStorage. Sem foto, o avatar mostra as iniciais do nome.
+
+O cartão de perfil (`UI.abrirPerfil`) abre pelo botão do nome na barra lateral. Depois de gravar,
+ele chama `montarLayout` de novo para a barra refletir a mudança na hora — por isso `ui.js` guarda
+a página ativa em `paginaAtiva`/`opcoesAtivas`.
+
+### Anexos
+
+Materiais e resumos de uma disciplina têm `anexos: []`. Cada item é só a **ficha** do arquivo
+(`{ id, nome, tipo, tamanho, salvoEm }`) — o conteúdo mora no IndexedDB, via `arquivos.js`.
+
+Foi o localStorage que obrigou essa divisão: ele guarda ~5 MB no total e só texto, e um PDF de aula
+estoura isso sozinho. O IndexedDB aceita centenas de MB e guarda o arquivo como está.
+
+- No formulário, o tipo de campo `anexos` (`UI.campoHTML` + `UI.ligarAnexos`) mostra a área de
+  arrastar. Os arquivos escolhidos ficam **na memória até o Salvar**, então cancelar não deixa lixo.
+- `Store.exportar()`/`importar()` são **assíncronos** porque juntam os anexos em base64 no `.json`:
+  um backup sozinho tem de bastar para reconstruir tudo em outro navegador.
+- Ao excluir um material ou resumo, os arquivos só somem depois que a janela do "Desfazer" passa
+  (`excluirComAnexos`), senão desfazer devolveria a ficha sem o PDF.
+
 ### Onde os dados vivem — importante
 
 Tudo que Luiz cadastra fica no **localStorage do navegador**, não no repositório. Ele cadastra pelas
@@ -64,11 +90,20 @@ telas (botões "+ Lançamento", "+ Prazo", "+ Disciplina", "+ Projeto"), sem toc
 
 - `dashboard/data.js` é só o seed inicial: é lido **uma única vez**, quando o navegador ainda não tem
   dados salvos. Alterar esse arquivo **não** muda o que Luiz já vê.
-- Para levar dados entre computadores ou fazer backup, use o botão **Backup** na barra lateral
-  (exporta/importa um `.json` com o estado completo).
+- Para levar dados entre computadores ou fazer backup, use o botão **Backup e dados** na barra
+  lateral (exporta/importa um `.json` com o estado completo e os anexos).
 - Ao mudar o formato do estado, trate a migração em `store.js` (`normalizar`, que roda em toda carga
   e precisa ser idempotente). Nunca troque a chave do localStorage: isso apagaria os dados de quem
   já usa. A conversão é gravada assim que a versão salva difere da atual.
+
+### Direção visual
+
+"Caderno clínico": papel quente, títulos e números-título em serifa (`--font-display`), e a coluna
+lateral escura nos **dois** temas — é ela que dá identidade ao painel, então tem tokens próprios
+(`--nav-*`), separados das superfícies do conteúdo. Cartões usam traço fino e um filete na cor do
+pilar (`.card.tinted`, `.pillar`) em vez de sombra pesada. A etiqueta acima do título (`.eyebrow`)
+dá hierarquia sem inventar mais um tamanho de fonte — em página de detalhe ela não deve repetir o
+que o link "voltar" já diz.
 
 ### Cores de dados
 

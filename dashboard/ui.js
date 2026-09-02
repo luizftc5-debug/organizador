@@ -183,6 +183,14 @@ const UI = (() => {
     return (partes[0][0] + (partes[1]?.[0] || "")).toUpperCase();
   }
 
+  /** Foto do perfil quando existe; senão, as iniciais do nome. */
+  function avatarHTML(perfil, classe = "brand-mark") {
+    const p = perfil || {};
+    return p.foto
+      ? `<div class="${classe}"><img src="${fmt.escape(p.foto)}" alt="Foto de ${fmt.escape(p.nome || "perfil")}" /></div>`
+      : `<div class="${classe}">${fmt.escape(iniciais(p.nome))}</div>`;
+  }
+
   // Sub-itens aparecem só sob a seção aberta, para a barra não crescer sem fim.
   function subItens(grupo, ativo, idAtivo) {
     if (grupo === "financeiro") {
@@ -201,7 +209,15 @@ const UI = (() => {
     return [];
   }
 
-  function montarLayout(ativo, { idAtivo = "" } = {}) {
+  // Guardados para o layout poder ser remontado sozinho (ex.: depois de trocar
+  // a foto do perfil) sem a página precisar repassar os mesmos argumentos.
+  let paginaAtiva = "home";
+  let opcoesAtivas = {};
+
+  function montarLayout(ativo, opcoes = {}) {
+    const { idAtivo = "" } = opcoes;
+    paginaAtiva = ativo;
+    opcoesAtivas = opcoes;
     const el = document.getElementById("sidebar");
     if (!el) return;
     const c = contagens();
@@ -222,23 +238,173 @@ const UI = (() => {
           .join("")}</div>` : ""}`;
     }).join("");
 
+    const linhaCurso = [perfil.curso, perfil.semestre ? `${perfil.semestre}º sem` : ""]
+      .filter(Boolean)
+      .join(" · ");
+
     el.innerHTML = `
-      <a class="brand" href="index.html">
-        <div class="brand-mark">${fmt.escape(iniciais(perfil.nome))}</div>
-        <div class="brand-text">
-          <div class="brand-name">${fmt.escape(perfil.nome || "")}</div>
-          <div class="brand-sub">${fmt.escape(perfil.curso || "")}</div>
-        </div>
-      </a>
+      <button class="brand" id="btn-perfil" type="button" title="Ver e editar seu perfil">
+        ${avatarHTML(perfil)}
+        <span class="brand-text">
+          <span class="brand-name">${fmt.escape(perfil.nome || "Seu nome")}</span>
+          <span class="brand-sub">${fmt.escape(linhaCurso || "definir curso")}</span>
+        </span>
+        <span class="brand-caret">▾</span>
+      </button>
+      <div class="nav-eyebrow">Painel</div>
       <nav class="nav">${itens}</nav>
       <div class="sidebar-foot">
         <button class="btn ghost sm" id="btn-tema"><span id="tema-icone">◐</span> <span id="tema-texto">Tema</span></button>
-        <button class="btn ghost sm" id="btn-backup">⤓ Backup</button>
+        <button class="btn ghost sm" id="btn-backup">⤓ Backup e dados</button>
       </div>`;
 
+    document.getElementById("btn-perfil").addEventListener("click", abrirPerfil);
     document.getElementById("btn-tema").addEventListener("click", tema.alternar);
     document.getElementById("btn-backup").addEventListener("click", abrirBackup);
     tema.aplicarRotulo();
+  }
+
+  /* ------------------------------- Perfil ---------------------------------- */
+
+  /**
+   * Reduz a foto escolhida antes de guardar: o localStorage tem uns 5 MB para
+   * tudo, e uma foto de celular sozinha passa disso. 256px de lado em JPEG
+   * fica em poucas dezenas de KB e é bem mais do que o avatar precisa.
+   */
+  function redimensionarFoto(file, lado = 256) {
+    return new Promise((ok, falha) => {
+      if (!file.type.startsWith("image/")) return falha(new Error("Escolha um arquivo de imagem (JPG, PNG…)."));
+      const leitor = new FileReader();
+      leitor.onerror = () => falha(new Error("Não foi possível ler a imagem."));
+      leitor.onload = () => {
+        const img = new Image();
+        img.onerror = () => falha(new Error("Este arquivo não parece ser uma imagem válida."));
+        img.onload = () => {
+          // Recorte quadrado central: o avatar é redondo, então sobra é sobra.
+          const corte = Math.min(img.width, img.height);
+          const cv = document.createElement("canvas");
+          cv.width = cv.height = lado;
+          const ctx = cv.getContext("2d");
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, (img.width - corte) / 2, (img.height - corte) / 2, corte, corte, 0, 0, lado, lado);
+          ok(cv.toDataURL("image/jpeg", 0.82));
+        };
+        img.src = leitor.result;
+      };
+      leitor.readAsDataURL(file);
+    });
+  }
+
+  /** Pop-up do perfil: quem é, o que já cadastrou e edição em linha. */
+  function abrirPerfil() {
+    const e = Store.estado();
+    const p = e.perfil || {};
+
+    const registros =
+      e.financeiro.transacoes.length + e.financeiro.metas.length + e.financeiro.contas.length +
+      e.financeiro.cartoes.length + e.faculdade.prazos.length + e.projetos.length + e.oportunidades.length;
+    const disciplinas = e.faculdade.disciplinas.length;
+    const urgentes = compromissos().filter((i) => {
+      const d = diasAte(i.data);
+      return d !== null && d >= 0 && d <= 7;
+    }).length;
+
+    const linha = [p.instituicao, p.cidade].filter(Boolean).join(" · ");
+    const curso = [p.curso, p.semestre ? `${p.semestre}º semestre` : ""].filter(Boolean).join(" · ");
+
+    const html = `
+      <div class="perfil-topo">
+        ${avatarHTML(p, "avatar")}
+        <div style="min-width:0;">
+          <div class="perfil-nome">${fmt.escape(p.nome || "Seu nome")}</div>
+          <div class="perfil-linha">${fmt.escape(curso || "Curso não informado")}</div>
+          ${linha ? `<div class="perfil-linha muted">${fmt.escape(linha)}</div>` : ""}
+          <div class="perfil-foto-acoes">
+            <button class="btn sm" data-acao="foto" type="button">${p.foto ? "Trocar foto" : "Enviar foto"}</button>
+            ${p.foto ? `<button class="btn ghost sm" data-acao="tirar-foto" type="button">Remover</button>` : ""}
+          </div>
+          <input type="file" accept="image/*" class="hidden" data-arquivo-foto />
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="perfil-stats">
+          <div class="perfil-stat"><b>${disciplinas}</b><span>${disciplinas === 1 ? "disciplina" : "disciplinas"}</span></div>
+          <div class="perfil-stat"><b>${registros}</b><span>registros</span></div>
+          <div class="perfil-stat"><b>${urgentes}</b><span>nesta semana</span></div>
+        </div>
+        <div class="card-note" data-uso>Anexos: calculando…</div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" data-acao="fechar" type="button">Fechar</button>
+        <button class="btn primary" data-acao="editar" type="button">Editar perfil</button>
+      </div>`;
+
+    abrirModal(html, {
+      aoMontar(modal, fechar) {
+        const entrada = modal.querySelector("[data-arquivo-foto]");
+
+        modal.querySelector('[data-acao="foto"]').addEventListener("click", () => entrada.click());
+
+        entrada.addEventListener("change", async (ev) => {
+          const f = ev.target.files[0];
+          if (!f) return;
+          try {
+            const foto = await redimensionarFoto(f);
+            Store.definirPerfil({ foto });
+            fechar(null);
+            montarLayout(paginaAtiva, opcoesAtivas);
+            toast("Foto atualizada.");
+            abrirPerfil();
+          } catch (err) {
+            toast(err.message);
+          }
+        });
+
+        modal.querySelector('[data-acao="tirar-foto"]')?.addEventListener("click", () => {
+          Store.definirPerfil({ foto: "" });
+          fechar(null);
+          montarLayout(paginaAtiva, opcoesAtivas);
+          toast("Foto removida.");
+          abrirPerfil();
+        });
+
+        modal.querySelector('[data-acao="editar"]').addEventListener("click", async () => {
+          fechar(null);
+          const v = await formulario({
+            titulo: "Editar perfil",
+            descricao: "Aparece na barra lateral e nos relatórios do painel.",
+            valores: p,
+            campos: [
+              { nome: "nome", rotulo: "Nome", tipo: "text", obrigatorio: true },
+              { nome: "curso", rotulo: "Curso", tipo: "text", placeholder: "Ex.: Medicina" },
+              { nome: "semestre", rotulo: "Semestre", tipo: "number", step: "1", placeholder: "Ex.: 6" },
+              { nome: "instituicao", rotulo: "Instituição", tipo: "text", placeholder: "Ex.: UFBA" },
+              { nome: "cidade", rotulo: "Cidade", tipo: "text", placeholder: "Ex.: Salvador, BA" },
+              { nome: "email", rotulo: "E-mail", tipo: "text" },
+            ],
+          });
+          if (!v) return abrirPerfil();
+          Store.definirPerfil(v);
+          montarLayout(paginaAtiva, opcoesAtivas);
+          toast("Perfil atualizado.");
+          abrirPerfil();
+        });
+
+        modal.querySelector('[data-acao="fechar"]').addEventListener("click", () => fechar(null));
+
+        // O tamanho dos anexos vem do IndexedDB, então chega depois da tela.
+        const alvo = modal.querySelector("[data-uso]");
+        if (typeof Arquivos !== "undefined" && Arquivos.disponivel) {
+          Arquivos.uso().then((u) => {
+            alvo.textContent = u.quantidade
+              ? `${u.quantidade} ${u.quantidade === 1 ? "anexo guardado" : "anexos guardados"} · ${Arquivos.tamanhoLegivel(u.bytes)} neste navegador`
+              : "Nenhum documento anexado ainda.";
+          }).catch(() => { alvo.textContent = ""; });
+        } else {
+          alvo.textContent = "";
+        }
+      },
+    });
   }
 
   /* --------------------------- Notas da disciplina ------------------------- */
@@ -378,16 +544,25 @@ const UI = (() => {
             });
           });
 
-          const primeiro = form.querySelector("input, select, textarea");
+          // Campos de anexo: cada um devolve a função que grava seus arquivos.
+          const gravarAnexos = {};
+          campos.filter((c) => c.tipo === "anexos").forEach((c) => {
+            gravarAnexos[c.nome] = ligarAnexos(modal, c, valores[c.nome] ?? c.valorPadrao ?? []);
+          });
+
+          const primeiro = form.querySelector("input:not([type=hidden]):not([type=file]), select, textarea");
           primeiro?.focus();
           if (primeiro?.select) setTimeout(() => primeiro.select(), 0);
 
-          const confirmar = () => {
+          const btnOk = modal.querySelector('[data-acao="confirmar"]');
+
+          const confirmar = async () => {
             const saida = {};
             let erro = false;
             modal.querySelectorAll(".field .err").forEach((n) => n.remove());
 
             campos.forEach((c) => {
+              if (c.tipo === "anexos") return; // tratado depois, é assíncrono
               const input = form.querySelector(`[name="${c.nome}"]`);
               let v = input.value;
               if (c.tipo === "number" || c.tipo === "dinheiro") {
@@ -409,10 +584,26 @@ const UI = (() => {
             });
 
             if (erro) return;
+
+            const nomes = Object.keys(gravarAnexos);
+            if (nomes.length) {
+              // Gravar no IndexedDB leva um instante: trava o botão para não
+              // salvar duas vezes e deixa claro que algo está acontecendo.
+              btnOk.disabled = true;
+              btnOk.textContent = "Salvando…";
+              try {
+                for (const nome of nomes) saida[nome] = await gravarAnexos[nome]();
+              } catch (err) {
+                btnOk.disabled = false;
+                btnOk.textContent = rotuloConfirmar;
+                return toast(`Não foi possível salvar os anexos: ${err.message}`);
+              }
+            }
+
             fechar(saida);
           };
 
-          modal.querySelector('[data-acao="confirmar"]').addEventListener("click", confirmar);
+          btnOk.addEventListener("click", confirmar);
           modal.querySelector('[data-acao="cancelar"]').addEventListener("click", () => fechar(null));
           form.addEventListener("keydown", (e) => {
             if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); confirmar(); }
@@ -448,6 +639,21 @@ const UI = (() => {
           </div>`;
         break;
       }
+      case "anexos": {
+        // O <input file> fica escondido: quem recebe o clique e o arrastar é a
+        // área pontilhada, que dá um alvo bem maior.
+        const lista = Array.isArray(valor) ? valor : [];
+        controle = `<div class="anexos-campo" data-anexos="${c.nome}">
+            <input type="hidden" name="${c.nome}" value="" />
+            <input type="file" multiple class="hidden" data-entrada />
+            <div class="anexos" data-lista>${lista.map(anexoLinhaHTML).join("")}</div>
+            <div class="dropzone" data-zona tabindex="0" role="button">
+              <strong>Anexar documento</strong>
+              Clique aqui ou arraste os arquivos${typeof Arquivos !== "undefined" ? ` (até ${Arquivos.LIMITE_MB} MB cada)` : ""}
+            </div>
+          </div>`;
+        break;
+      }
       case "date":
         controle = `<input type="date" name="${c.nome}" value="${v}" />`;
         break;
@@ -464,6 +670,87 @@ const UI = (() => {
         ${controle}
         ${c.dica ? `<span class="hint">${fmt.escape(c.dica)}</span>` : ""}
       </div>`;
+  }
+
+  /** Uma linha da lista de anexos dentro de um formulário (com botão remover). */
+  function anexoLinhaHTML(a, pendente = false) {
+    const cls = typeof Arquivos !== "undefined" ? Arquivos.classificar(a) : { classe: "", rotulo: "arq" };
+    const tam = typeof Arquivos !== "undefined" ? Arquivos.tamanhoLegivel(a.tamanho) : "";
+    return `<div class="anexo" data-anexo-id="${fmt.escape(a.id || "")}" ${pendente ? 'data-pendente="1"' : ""}>
+        <span class="anexo-ic ${cls.classe}">${fmt.escape(cls.rotulo)}</span>
+        <span class="anexo-nome">${fmt.escape(a.nome)}
+          <span class="anexo-meta">${fmt.escape(tam)}${pendente ? " · a salvar" : ""}</span>
+        </span>
+        <button class="btn ghost sm" data-remover type="button" aria-label="Remover anexo">✕</button>
+      </div>`;
+  }
+
+  /**
+   * Liga a área de anexos de um formulário. Os arquivos escolhidos ficam na
+   * memória até o Salvar — assim cancelar não deixa lixo no IndexedDB.
+   * Devolve uma função que grava tudo e resolve com a lista final de fichas.
+   */
+  function ligarAnexos(modal, campo, valorInicial) {
+    const raiz = modal.querySelector(`[data-anexos="${campo.nome}"]`);
+    if (!raiz) return async () => valorInicial || [];
+
+    const entrada = raiz.querySelector("[data-entrada]");
+    const zona = raiz.querySelector("[data-zona]");
+    const lista = raiz.querySelector("[data-lista]");
+
+    let mantidos = [...(valorInicial || [])];
+    const removidos = [];
+    const novos = []; // File ainda não gravados
+
+    const redesenhar = () => {
+      lista.innerHTML =
+        mantidos.map((a) => anexoLinhaHTML(a)).join("") +
+        novos.map((f) => anexoLinhaHTML({ nome: f.name, tipo: f.type, tamanho: f.size }, true)).join("");
+
+      lista.querySelectorAll(".anexo").forEach((el, i) => {
+        el.querySelector("[data-remover]").addEventListener("click", () => {
+          if (i < mantidos.length) removidos.push(mantidos.splice(i, 1)[0]);
+          else novos.splice(i - mantidos.length, 1);
+          redesenhar();
+        });
+      });
+    };
+
+    const aceitar = (arquivos) => {
+      const limite = typeof Arquivos !== "undefined" ? Arquivos.LIMITE_MB * 1024 * 1024 : Infinity;
+      [...arquivos].forEach((f) => {
+        if (f.size > limite) return toast(`"${f.name}" passa de ${Arquivos.LIMITE_MB} MB e não foi anexado.`);
+        novos.push(f);
+      });
+      redesenhar();
+    };
+
+    zona.addEventListener("click", () => entrada.click());
+    zona.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); entrada.click(); }
+    });
+    entrada.addEventListener("change", (ev) => { aceitar(ev.target.files); entrada.value = ""; });
+
+    ["dragenter", "dragover"].forEach((n) =>
+      zona.addEventListener(n, (ev) => { ev.preventDefault(); zona.classList.add("dragover"); })
+    );
+    ["dragleave", "drop"].forEach((n) =>
+      zona.addEventListener(n, (ev) => { ev.preventDefault(); zona.classList.remove("dragover"); })
+    );
+    zona.addEventListener("drop", (ev) => aceitar(ev.dataTransfer.files));
+
+    redesenhar();
+
+    // Só aqui os arquivos vão para o disco — e os apagados somem de vez.
+    return async () => {
+      for (const a of removidos) await Arquivos.remover(a.id);
+      const salvos = [];
+      for (const f of novos) {
+        try { salvos.push(await Arquivos.salvar(f)); }
+        catch (err) { toast(err.message); }
+      }
+      return [...mantidos, ...salvos];
+    };
   }
 
   function confirmar({ titulo, descricao, rotuloConfirmar = "Confirmar", perigo = false }) {
@@ -499,31 +786,52 @@ const UI = (() => {
 
     const html = `
       <div class="modal-head">
-        <h2 class="modal-title">Backup dos seus dados</h2>
-        <p class="modal-desc">Seus dados ficam salvos neste navegador. Exporte um arquivo para não perdê-los ao trocar de computador ou limpar o cache.</p>
+        <h2 class="modal-title">Backup e dados</h2>
+        <p class="modal-desc">Tudo que você cadastra fica salvo só neste navegador. Exporte um arquivo para não perder nada ao trocar de computador ou limpar o cache.</p>
       </div>
       <div class="modal-body">
-        <div class="notice info"><span class="ic">i</span><span>Você tem <strong>${total}</strong> ${total === 1 ? "registro salvo" : "registros salvos"} neste navegador.</span></div>
-        <button class="btn primary" data-acao="exportar" type="button" style="justify-content:center;">⤓ Exportar backup (.json)</button>
-        <button class="btn" data-acao="importar" type="button" style="justify-content:center;">⤒ Importar backup</button>
+        <div class="perfil-stats">
+          <div class="perfil-stat"><b>${total}</b><span>registros</span></div>
+          <div class="perfil-stat"><b data-anexos-n>—</b><span>anexos</span></div>
+          <div class="perfil-stat"><b data-anexos-mb>—</b><span>em arquivos</span></div>
+        </div>
+        <button class="btn primary block" data-acao="exportar" type="button">⤓ Exportar backup (.json)</button>
+        <button class="btn block" data-acao="importar" type="button">⤒ Importar backup</button>
         <input type="file" accept="application/json" class="hidden" data-arquivo />
-        <button class="btn danger" data-acao="limpar" type="button" style="justify-content:center;">Apagar todos os dados</button>
+        <span class="hint">O backup leva junto os documentos anexados nas disciplinas, então o arquivo pode ficar grande.</span>
+        <button class="btn danger block" data-acao="limpar" type="button">Apagar todos os dados</button>
       </div>
       <div class="modal-foot"><button class="btn" data-acao="fechar" type="button">Fechar</button></div>`;
 
     abrirModal(html, {
       aoMontar(modal, fechar) {
         const arquivo = modal.querySelector("[data-arquivo]");
+        const btnExportar = modal.querySelector('[data-acao="exportar"]');
 
-        modal.querySelector('[data-acao="exportar"]').addEventListener("click", () => {
-          const blob = new Blob([Store.exportar()], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `organizador-backup-${hojeISO()}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          toast("Backup exportado.");
+        if (typeof Arquivos !== "undefined" && Arquivos.disponivel) {
+          Arquivos.uso().then((u) => {
+            modal.querySelector("[data-anexos-n]").textContent = u.quantidade;
+            modal.querySelector("[data-anexos-mb]").textContent = Arquivos.tamanhoLegivel(u.bytes);
+          }).catch(() => {});
+        }
+
+        btnExportar.addEventListener("click", async () => {
+          btnExportar.disabled = true;
+          btnExportar.textContent = "Montando o backup…";
+          try {
+            const blob = new Blob([await Store.exportar()], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `organizador-backup-${hojeISO()}.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+            toast("Backup exportado.");
+          } catch (err) {
+            toast(`Não foi possível exportar: ${err.message}`);
+          }
+          btnExportar.disabled = false;
+          btnExportar.textContent = "⤓ Exportar backup (.json)";
         });
 
         modal.querySelector('[data-acao="importar"]').addEventListener("click", () => arquivo.click());
@@ -532,12 +840,12 @@ const UI = (() => {
           const f = ev.target.files[0];
           if (!f) return;
           const leitor = new FileReader();
-          leitor.onload = () => {
+          leitor.onload = async () => {
             try {
-              Store.importar(leitor.result);
+              const r = await Store.importar(leitor.result);
               fechar();
-              toast("Backup importado. Recarregando…");
-              setTimeout(() => location.reload(), 600);
+              toast(r.anexos ? `Backup importado com ${r.anexos} anexos. Recarregando…` : "Backup importado. Recarregando…");
+              setTimeout(() => location.reload(), 800);
             } catch (err) {
               toast(`Não foi possível importar: ${err.message}`);
             }
@@ -548,12 +856,12 @@ const UI = (() => {
         modal.querySelector('[data-acao="limpar"]').addEventListener("click", async () => {
           const ok = await confirmar({
             titulo: "Apagar todos os dados?",
-            descricao: "Isso remove tudo que você cadastrou neste navegador. Exporte um backup antes se quiser poder voltar atrás.",
+            descricao: "Isso remove tudo que você cadastrou neste navegador, inclusive os documentos anexados. Exporte um backup antes se quiser poder voltar atrás.",
             rotuloConfirmar: "Apagar tudo",
             perigo: true,
           });
           if (!ok) return;
-          Store.limpar();
+          await Store.limpar();
           fechar();
           location.reload();
         });
@@ -670,7 +978,7 @@ const UI = (() => {
     fmt, hojeISO, mesAtual, mesAnterior, diasAte, urgencia, chaveSemana, parametro,
     compromissos, conflitos, contagens, mediaDisciplina, proximaAvaliacao,
     iniciarPagina, montarLayout, tema, toast, formulario, confirmar, abrirModal,
-    abrirBackup, vazio, barras, colunasMensais, medidor,
+    abrirBackup, abrirPerfil, avatarHTML, iniciais, vazio, barras, colunasMensais, medidor,
   };
 })();
 

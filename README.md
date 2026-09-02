@@ -29,7 +29,7 @@ Não é preciso editar nenhum arquivo. Tudo se cadastra pelos botões das telas:
 | **Visão geral** | Saldo, alertas de atraso e de semana cheia, agenda dos próximos 30 dias, leitura automática da situação |
 | **Financeiro** | Lançar receitas e despesas (dizendo de qual conta ou cartão saíram), ver gastos por categoria e por mês, acompanhar metas |
 | **Contas e cartões** | Cadastrar contas com saldo, cadastrar cartões com fechamento e vencimento, ver a fatura aberta e o balanço de cada um |
-| **Faculdade** | Disciplinas, prazos e entregas. Cada disciplina abre em **página própria**, com avaliações e notas, prazos, materiais e resumos |
+| **Faculdade** | Disciplinas, prazos e entregas. Cada disciplina abre em **página própria**, com avaliações e notas, prazos, materiais e resumos — e em materiais e resumos dá para **anexar documentos** (PDF, slides, fotos) |
 | **Projetos** | Só iniciativas pessoais que geram renda, divididas em etapas, com renda estimada e o que já foi faturado |
 
 > Trabalhos da faculdade e o TCC ficam em **Faculdade**, não em Projetos.
@@ -43,6 +43,27 @@ Não é preciso editar nenhum arquivo. Tudo se cadastra pelos botões das telas:
 
 Excluiu algo sem querer? O aviso que aparece embaixo traz **Desfazer**.
 
+### Seu perfil
+
+Clique no seu nome, no alto da barra lateral, para abrir o cartão de perfil: ele mostra quantas
+disciplinas e registros você tem e quantos compromissos há nesta semana.
+
+- **Editar perfil** muda nome, curso, semestre, instituição e cidade — o que aparece na barra lateral.
+- **Enviar foto** troca as iniciais por uma foto sua. A imagem é recortada e reduzida antes de
+  salvar, então ocupa poucos KB.
+
+### Anexar documentos nas disciplinas
+
+Em **Materiais** e em **Resumos**, dentro da página de uma disciplina, o formulário tem uma área
+pontilhada: clique nela ou arraste os arquivos para cima. Vale PDF, slides, fotos do quadro,
+planilhas — até 25 MB por arquivo.
+
+Depois de salvo, o documento aparece como um botão na lista. Clicar abre o PDF ou a imagem em outra
+aba; os demais formatos são baixados.
+
+> Os arquivos ficam guardados no navegador (IndexedDB, que aguenta bem mais que os ~5 MB do resto) e
+> **vão junto no backup** — por isso o `.json` exportado pode ficar grande.
+
 ### Onde ficam seus dados
 
 No próprio navegador (localStorage) — nada é enviado para lugar nenhum. Consequência prática: os
@@ -50,8 +71,8 @@ dados ficam **naquele navegador, naquele computador**.
 
 Para backup ou para usar em outro aparelho, clique em **Backup** na barra lateral:
 
-- **Exportar** gera um arquivo `.json` com tudo
-- **Importar** restaura esse arquivo em qualquer navegador
+- **Exportar** gera um arquivo `.json` com tudo, inclusive os documentos anexados
+- **Importar** restaura esse arquivo em qualquer navegador, anexos e todos
 
 Vale exportar de tempos em tempos — limpar os dados de navegação do navegador apaga o que está salvo.
 
@@ -86,6 +107,7 @@ dashboard/
   disciplina.html  disciplina.js   página de uma disciplina
   projetos.html    projetos.js     projetos de renda e oportunidades
   store.js                         dados: localStorage, CRUD e backup
+  arquivos.js                      anexos: IndexedDB (PDF, slides, fotos)
   financas.js                      saldo por conta, fatura por cartão
   ui.js                            modais, avisos, gráficos, datas
   theme.css                        design system (claro/escuro)

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Visão geral · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
@@ -13,8 +14,9 @@
       <div class="wrap">
         <header class="topbar">
           <div>
-            <h1>Visão geral</h1>
-            <p class="sub" id="sub-hoje"></p>
+            <div class="eyebrow" id="sub-hoje"></div>
+            <h1 id="saudacao">Visão geral</h1>
+            <p class="sub" id="sub-resumo"></p>
           </div>
           <div class="topbar-actions">
             <button class="btn" id="btn-lancamento">+ Lançamento</button>
@@ -25,11 +27,11 @@
         <div id="avisos"></div>
 
         <div class="grid g2" style="margin-bottom:14px;">
-          <section class="card">
+          <section class="card hero">
             <div class="stat-label">Saldo atual</div>
             <div class="hero-value num" id="hero-saldo">—</div>
             <div class="stat-sub" id="hero-detalhe"></div>
-            <button class="btn ghost sm" id="btn-saldo" style="margin-top:10px;">Ajustar saldo</button>
+            <button class="btn sm" id="btn-saldo" style="margin-top:14px;">Ajustar saldo</button>
           </section>
 
           <section class="card">
@@ -61,6 +63,7 @@
   </div>
 
   <script src="data.js"></script>
+  <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
   <script src="financas.js"></script>

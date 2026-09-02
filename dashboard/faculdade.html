@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Faculdade · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="theme.css" />
   <script src="config.js"></script>
 </head>
@@ -14,6 +15,7 @@
       <div class="wrap">
         <header class="topbar">
           <div>
+            <div class="eyebrow faculdade">Disciplinas e prazos</div>
             <h1>Faculdade</h1>
             <p class="sub">Medicina · disciplinas, provas, entregas e TCC.</p>
           </div>
@@ -26,17 +28,17 @@
         <div id="avisos"></div>
 
         <div class="grid g3" style="margin-bottom:14px;">
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Disciplinas ativas</div>
             <div class="stat-value num" id="s-disciplinas">—</div>
             <div class="stat-sub" id="s-disciplinas-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Prazos em aberto</div>
             <div class="stat-value num" id="s-prazos">—</div>
             <div class="stat-sub" id="s-prazos-d"></div>
           </div>
-          <div class="card">
+          <div class="card tinted faculdade">
             <div class="stat-label">Próxima avaliação</div>
             <div class="stat-value" id="s-proxima" style="font-size:19px;">—</div>
             <div class="stat-sub" id="s-proxima-d"></div>
@@ -79,6 +81,7 @@
   </div>
 
   <script src="data.js"></script>
+  <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
   <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
