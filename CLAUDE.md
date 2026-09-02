@@ -21,13 +21,41 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 |---|---|
 | `index.html` + `home.js` | Visão geral: saldo em destaque, alertas, agenda de 30 dias, leitura automática da situação |
 | `financeiro.html` + `financeiro.js` | Planilha de lançamentos, gráficos por mês e categoria, metas |
-| `faculdade.html` + `faculdade.js` | Disciplinas, notas, provas e entregas |
-| `projetos.html` + `projetos.js` | Projetos com etapas (checklist) e oportunidades de renda |
+| `contas.html` + `contas.js` | Contas e cartões: saldo de cada conta, fatura de cada cartão, balanço |
+| `faculdade.html` + `faculdade.js` | Lista de disciplinas e prazos gerais |
+| `disciplina.html` + `disciplina.js` | Página de uma disciplina: avaliações, prazos, materiais e resumos |
+| `projetos.html` + `projetos.js` | Projetos pessoais que geram renda + oportunidades |
 | `store.js` | Camada de dados: localStorage + CRUD + backup em JSON |
+| `financas.js` | Cálculos derivados: saldo por conta, ciclo e fatura de cartão, balanço |
 | `ui.js` | Componentes: layout, modais de formulário, avisos, gráficos, datas/urgência |
 | `theme.css` | Design system (tema claro/escuro) |
 | `config.js` + `google-integration.js` | Integração OAuth com Google Calendar e Drive |
 | `data.js` | Conteúdo inicial (seed), lido só na primeira abertura |
+
+### Divisão entre Faculdade e Projetos
+
+- **Faculdade** cobre tudo que é acadêmico, **incluindo o TCC e a metanálise** — como prazos
+  (`tipo: "TCC"`) ou avaliações dentro da disciplina correspondente.
+- **Projetos** é só para iniciativas pessoais com fim financeiro (monitoria, cursinho, freelas,
+  conteúdo). Cada projeto tem `rendaEstimada` (por mês) e `receitaGerada` (total já recebido).
+
+Não misture os dois: trabalho acadêmico não vira projeto.
+
+### Contas, cartões e saldo
+
+- `financeiro.contas` guarda o `saldoInicial` de cada conta; o saldo atual é **calculado**
+  (`Financas.saldoConta`) somando os lançamentos com `origem: "conta:<id>"`.
+- `financeiro.cartoes` tem `fechamento` e `vencimento` (dias do mês); a fatura aberta é calculada
+  por ciclo (`Financas.faturaCartao`) sobre lançamentos com `origem: "cartao:<id>"`.
+- Enquanto não houver nenhuma conta cadastrada, vale o `saldoAtual` informado à mão. Assim que
+  existe conta, o campo manual some da interface para os dois números não se contradizerem.
+- Nunca guarde saldo calculado: ele sempre sai dos lançamentos, para não dessincronizar.
+
+### Página por disciplina
+
+Cada disciplina tem `avaliacoes`, `materiais` e `resumos` como listas dentro dela, editadas por
+`Store.subInserir/subAtualizar/subRemover`. A média é ponderada pelo `peso` das avaliações com nota
+lançada (`UI.mediaDisciplina`). Prazos apontam para a disciplina por `disciplinaId`.
 
 ### Onde os dados vivem — importante
 
@@ -38,8 +66,9 @@ telas (botões "+ Lançamento", "+ Prazo", "+ Disciplina", "+ Projeto"), sem toc
   dados salvos. Alterar esse arquivo **não** muda o que Luiz já vê.
 - Para levar dados entre computadores ou fazer backup, use o botão **Backup** na barra lateral
   (exporta/importa um `.json` com o estado completo).
-- Ao mudar o formato do estado, trate a migração em `store.js` (`normalizar` e `migrarLegado`) para
-  não quebrar os dados já salvos de quem está usando.
+- Ao mudar o formato do estado, trate a migração em `store.js` (`normalizar`, que roda em toda carga
+  e precisa ser idempotente). Nunca troque a chave do localStorage: isso apagaria os dados de quem
+  já usa. A conversão é gravada assim que a versão salva difere da atual.
 
 ### Cores de dados
 

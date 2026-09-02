@@ -57,7 +57,15 @@
     const atual = totais(doMes(mes));
     const anterior = totais(doMes(UI.mesAnterior(mes)));
 
-    document.getElementById("s-saldo").textContent = fmt.moeda(e.financeiro.saldoAtual);
+    // Com contas cadastradas, o saldo é a soma delas — informar à mão deixaria
+    // os dois números brigando entre si.
+    const temContas = Financas.temContas();
+    document.getElementById("s-saldo").textContent = fmt.moeda(Financas.saldoTotal());
+    document.getElementById("s-saldo-d").innerHTML = temContas
+      ? `Soma de ${Store.lista("financeiro.contas").length} ${Store.lista("financeiro.contas").length === 1 ? "conta" : "contas"} · <a href="contas.html">ver detalhes</a>`
+      : "";
+    document.getElementById("btn-saldo").classList.toggle("hidden", temContas);
+
     document.getElementById("s-receitas").textContent = fmt.moeda(atual.receita);
     document.getElementById("s-despesas").textContent = fmt.moeda(atual.despesa);
 
@@ -207,7 +215,7 @@
       <table class="sheet">
         <thead>
           <tr>
-            <th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th>
+            <th>Data</th><th>Descrição</th><th>Categoria</th><th>Pago com</th>
             <th>Status</th><th style="text-align:right;">Valor</th><th></th>
           </tr>
         </thead>
@@ -229,7 +237,7 @@
         <td class="num muted" style="white-space:nowrap;">${fmt.dataCurta(item.data)}</td>
         <td><span class="title">${fmt.escape(item.descricao || "(sem descrição)")}</span></td>
         <td><span class="badge">${fmt.escape(item.categoria || "Outros")}</span></td>
-        <td class="muted">${fmt.escape(item.forma || "—")}</td>
+        <td class="muted">${fmt.escape(Financas.nomeOrigem(item.origem) || item.forma || "—")}</td>
         <td><span class="badge ${item.status === "pendente" ? "urgente" : "feito"}">${item.status === "pendente" ? "pendente" : "pago"}</span></td>
         <td class="right" style="color:${receita ? "var(--success-text)" : "var(--ink)"};">
           ${receita ? "+" : "−"}${fmt.moeda(Math.abs(Number(item.valor) || 0))}
@@ -257,7 +265,13 @@
       { nome: "valor", rotulo: "Valor (R$)", tipo: "dinheiro", obrigatorio: true, placeholder: "0,00" },
       { nome: "categoria", rotulo: "Categoria", tipo: "select", opcoes: Store.estado().financeiro.categorias },
       { nome: "data", rotulo: "Data", tipo: "date", obrigatorio: true, valorPadrao: UI.hojeISO() },
-      { nome: "forma", rotulo: "Forma de pagamento", tipo: "text", placeholder: "Pix, cartão, dinheiro…" },
+      {
+        nome: "origem", rotulo: "Pago com", tipo: "select", opcoes: Financas.opcoesOrigem(),
+        dica: Financas.opcoesOrigem().length > 1
+          ? "Define de qual conta ou cartão este valor sai."
+          : "Cadastre contas e cartões para acompanhar o balanço de cada um.",
+      },
+      { nome: "forma", rotulo: "Observação", tipo: "text", placeholder: "Pix, débito, parcelado…" },
       { nome: "status", rotulo: "Situação", tipo: "segmento", opcoes: [{ valor: "pago", rotulo: "Pago" }, { valor: "pendente", rotulo: "Pendente" }] },
     ];
   }

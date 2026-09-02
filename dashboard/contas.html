@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contas e cartões · Organizador</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main">
+      <div class="wrap">
+        <a class="voltar" href="financeiro.html">← Financeiro</a>
+
+        <header class="topbar">
+          <div>
+            <h1>Contas e cartões</h1>
+            <p class="sub">Quanto você tem em cada conta e quanto deve em cada cartão.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn" id="btn-cartao">+ Cartão</button>
+            <button class="btn primary" id="btn-conta">+ Conta</button>
+          </div>
+        </header>
+
+        <div id="avisos"></div>
+
+        <div class="grid g3" style="margin-bottom:14px;">
+          <div class="card">
+            <div class="stat-label">Total em contas</div>
+            <div class="stat-value num" id="s-total">—</div>
+            <div class="stat-sub" id="s-total-d"></div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Faturas abertas</div>
+            <div class="stat-value num" id="s-faturas">—</div>
+            <div class="stat-sub" id="s-faturas-d"></div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Sobra estimada</div>
+            <div class="stat-value num" id="s-sobra">—</div>
+            <div class="stat-sub">Contas menos faturas em aberto</div>
+          </div>
+        </div>
+
+        <section class="section" style="margin-top:8px;">
+          <div class="section-head">
+            <h2 class="section-title"><span class="swatch financeiro"></span>Contas</h2>
+            <span class="card-note" id="contas-resumo"></span>
+          </div>
+          <div id="contas"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title"><span class="swatch projetos"></span>Cartões de crédito</h2>
+            <span class="card-note" id="cartoes-resumo"></span>
+          </div>
+          <div id="cartoes"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Balanço</h2>
+            <span class="card-note">participação de cada conta e cartão nos gastos</span>
+          </div>
+          <div class="card">
+            <div id="balanco"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
+  <script src="financas.js"></script>
+  <script src="contas.js"></script>
+</body>
+</html>

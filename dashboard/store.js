@@ -13,6 +13,8 @@ const Store = (() => {
   const KEY = "organizador.estado.v2";
   const KEY_LEGADO_TRANSACOES = "organizador.financeiro.transacoes.v1";
 
+  const PERFIL_PADRAO = { nome: "Luiz Felipe Tonhá", curso: "Medicina" };
+
   const CATEGORIAS_PADRAO = [
     "Moradia",
     "Alimentação",
@@ -34,9 +36,18 @@ const Store = (() => {
 
   function estadoVazio() {
     return {
-      versao: 2,
+      versao: 3,
       atualizadoEm: new Date().toISOString(),
-      financeiro: { saldoAtual: 0, moeda: "BRL", categorias: [...CATEGORIAS_PADRAO], transacoes: [], metas: [] },
+      perfil: { ...PERFIL_PADRAO },
+      financeiro: {
+        saldoAtual: 0,
+        moeda: "BRL",
+        categorias: [...CATEGORIAS_PADRAO],
+        transacoes: [],
+        metas: [],
+        contas: [],
+        cartoes: [],
+      },
       faculdade: { disciplinas: [], prazos: [] },
       projetos: [],
       oportunidades: [],
@@ -59,13 +70,13 @@ const Store = (() => {
     (fin.receitasMes || []).forEach((r) =>
       base.financeiro.transacoes.push({
         id: uid("t"), data: r.data, tipo: "receita", categoria: r.categoria || "Renda",
-        descricao: r.descricao || "", forma: "", status: "pago", valor: Number(r.valor) || 0,
+        descricao: r.descricao || "", forma: "", origem: "", status: "pago", valor: Number(r.valor) || 0,
       })
     );
     (fin.despesasMes || []).forEach((d) =>
       base.financeiro.transacoes.push({
         id: uid("t"), data: d.data, tipo: "despesa", categoria: d.categoria || "Outros",
-        descricao: d.descricao || "", forma: "", status: "pago", valor: Number(d.valor) || 0,
+        descricao: d.descricao || "", forma: "", origem: "", status: "pago", valor: Number(d.valor) || 0,
       })
     );
     (fin.metas || []).forEach((m) =>
@@ -79,20 +90,21 @@ const Store = (() => {
     (fac.disciplinas || []).forEach((d) =>
       base.faculdade.disciplinas.push({
         id: uid("d"), nome: d.nome || "", status: d.status || "ativa", professor: d.professor || "",
-        nota: d.nota ?? null, proximaAvaliacao: d.proximaAvaliacao || "",
+        proximaAvaliacao: d.proximaAvaliacao || "", nota: d.nota ?? null,
+        avaliacoes: [], materiais: [], resumos: [],
       })
     );
     (fac.prazos || []).forEach((p) =>
       base.faculdade.prazos.push({
         id: uid("p"), descricao: p.descricao || "", data: p.data || "",
-        tipo: p.tipo || "entrega", concluido: !!p.concluido,
+        tipo: p.tipo || "entrega", disciplinaId: "", concluido: !!p.concluido,
       })
     );
 
     (DATA.projetos || []).forEach((p) =>
       base.projetos.push({
         id: uid("pj"), nome: p.nome || "", status: p.status || "em andamento",
-        descricao: p.descricao || "", deadline: p.deadline || "",
+        descricao: p.descricao || "", deadline: p.deadline || "", rendaEstimada: null,
         passos: (p.passos || (p.proximoPasso ? [{ texto: p.proximoPasso }] : [])).map((s) => ({
           id: uid("s"), texto: typeof s === "string" ? s : s.texto || "", feito: typeof s === "object" && !!s.feito,
         })),
@@ -122,7 +134,7 @@ const Store = (() => {
       base.financeiro.transacoes = antigos.map((t) => ({
         id: t.id || uid("t"), data: t.data || "", tipo: t.tipo === "receita" ? "receita" : "despesa",
         categoria: t.categoria || "Outros", descricao: t.descricao || "", forma: t.forma || "",
-        status: t.status === "pendente" ? "pendente" : "pago", valor: Number(t.valor) || 0,
+        origem: "", status: t.status === "pendente" ? "pendente" : "pago", valor: Number(t.valor) || 0,
       }));
       localStorage.removeItem(KEY_LEGADO_TRANSACOES);
     } catch (e) {
@@ -138,7 +150,11 @@ const Store = (() => {
     try {
       const bruto = localStorage.getItem(KEY);
       if (bruto) {
-        estado = normalizar(JSON.parse(bruto));
+        const salvo = JSON.parse(bruto);
+        estado = normalizar(salvo);
+        // Grava já o formato convertido, para o que está no navegador não
+        // ficar preso a uma versão antiga esperando a próxima edição.
+        if (salvo.versao !== estado.versao) persistir();
         return estado;
       }
     } catch (e) {
@@ -149,19 +165,48 @@ const Store = (() => {
     return estado;
   }
 
-  // Garante que estados salvos por versões anteriores tenham todos os campos.
+  /**
+   * Garante que estados salvos por versões anteriores tenham todos os campos
+   * e converte os formatos antigos. Roda em toda carga, então precisa ser
+   * idempotente.
+   */
   function normalizar(e) {
     const base = estadoVazio();
     const out = { ...base, ...e };
+
+    out.perfil = { ...PERFIL_PADRAO, ...(e.perfil || {}) };
     out.financeiro = { ...base.financeiro, ...(e.financeiro || {}) };
     out.faculdade = { ...base.faculdade, ...(e.faculdade || {}) };
-    out.financeiro.transacoes = e.financeiro?.transacoes || [];
+
     out.financeiro.metas = e.financeiro?.metas || [];
+    out.financeiro.contas = e.financeiro?.contas || [];
+    out.financeiro.cartoes = e.financeiro?.cartoes || [];
     out.financeiro.categorias = e.financeiro?.categorias?.length ? e.financeiro.categorias : [...CATEGORIAS_PADRAO];
-    out.faculdade.disciplinas = e.faculdade?.disciplinas || [];
-    out.faculdade.prazos = e.faculdade?.prazos || [];
-    out.projetos = Array.isArray(e.projetos) ? e.projetos : [];
+
+    // v2 → v3: lançamento passa a saber de qual conta ou cartão saiu.
+    out.financeiro.transacoes = (e.financeiro?.transacoes || []).map((t) => ({ origem: "", ...t }));
+
+    // v2 → v3: nota e próxima avaliação viram itens da lista de avaliações,
+    // que passa a ser a única fonte de notas e datas de prova da disciplina.
+    out.faculdade.disciplinas = (e.faculdade?.disciplinas || []).map((d) => {
+      const disc = { materiais: [], resumos: [], avaliacoes: [], ...d };
+      disc.avaliacoes = [...(disc.avaliacoes || [])];
+
+      if (disc.proximaAvaliacao) {
+        disc.avaliacoes.push({ id: uid("av"), nome: "Avaliação", data: disc.proximaAvaliacao, nota: null, peso: 1 });
+        delete disc.proximaAvaliacao;
+      }
+      if (disc.nota !== null && disc.nota !== undefined && disc.nota !== "") {
+        disc.avaliacoes.push({ id: uid("av"), nome: "Nota lançada", data: "", nota: Number(disc.nota), peso: 1 });
+      }
+      delete disc.nota;
+      return disc;
+    });
+
+    out.faculdade.prazos = (e.faculdade?.prazos || []).map((p) => ({ disciplinaId: "", ...p }));
+    out.projetos = (Array.isArray(e.projetos) ? e.projetos : []).map((p) => ({ rendaEstimada: null, ...p }));
     out.oportunidades = Array.isArray(e.oportunidades) ? e.oportunidades : [];
+    out.versao = 3;
     return out;
   }
 
@@ -180,12 +225,12 @@ const Store = (() => {
   /* ------------------------- Acesso às coleções --------------------------- */
 
   // Caminhos aceitos: "financeiro.transacoes", "financeiro.metas",
-  // "faculdade.disciplinas", "faculdade.prazos", "projetos", "oportunidades".
+  // "financeiro.contas", "financeiro.cartoes", "faculdade.disciplinas",
+  // "faculdade.prazos", "projetos", "oportunidades".
   function colecao(caminho) {
     const e = carregar();
-    const partes = caminho.split(".");
     let alvo = e;
-    for (const p of partes) alvo = alvo[p];
+    for (const p of caminho.split(".")) alvo = alvo[p];
     if (!Array.isArray(alvo)) throw new Error(`Coleção inválida: ${caminho}`);
     return alvo;
   }
@@ -198,6 +243,7 @@ const Store = (() => {
     aoMudar(fn) { ouvintes.push(fn); },
 
     lista(caminho) { return colecao(caminho); },
+    achar(caminho, id) { return colecao(caminho).find((x) => x.id === id) || null; },
 
     inserir(caminho, item) {
       const novo = { id: uid(), ...item };
@@ -231,6 +277,34 @@ const Store = (() => {
     },
 
     indiceDe(caminho, id) { return colecao(caminho).findIndex((x) => x.id === id); },
+
+    /* --- Sub-listas de um item (avaliações, materiais e resumos de uma
+           disciplina; etapas de um projeto) --------------------------------- */
+
+    subInserir(caminho, itemId, campo, sub) {
+      const item = colecao(caminho).find((x) => x.id === itemId);
+      if (!item) return null;
+      const novo = { id: uid(campo.slice(0, 2)), ...sub };
+      item[campo] = [...(item[campo] || []), novo];
+      persistir();
+      return novo;
+    },
+
+    subAtualizar(caminho, itemId, campo, subId, patch) {
+      const item = colecao(caminho).find((x) => x.id === itemId);
+      if (!item) return null;
+      item[campo] = (item[campo] || []).map((s) => (s.id === subId ? { ...s, ...patch } : s));
+      persistir();
+      return item;
+    },
+
+    subRemover(caminho, itemId, campo, subId) {
+      const item = colecao(caminho).find((x) => x.id === itemId);
+      if (!item) return null;
+      item[campo] = (item[campo] || []).filter((s) => s.id !== subId);
+      persistir();
+      return item;
+    },
 
     definirSaldo(valor) {
       carregar().financeiro.saldoAtual = Number(valor) || 0;

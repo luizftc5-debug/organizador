@@ -139,39 +139,57 @@ a { color: inherit; }
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 20px 14px;
+  padding: 18px 12px;
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 8px 20px;
+  padding: 8px;
+  margin-bottom: 18px;
+  border-radius: var(--r-md);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.14s;
 }
 
+.brand:hover { background: var(--surface-2); }
+
 .brand-mark {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--s-faculdade);
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, var(--s-faculdade), var(--s-financeiro));
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
   flex-shrink: 0;
 }
 
-.brand-name { font-size: 13.5px; font-weight: 650; line-height: 1.25; }
+.brand-text { min-width: 0; }
+.brand-name {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .brand-sub { font-size: 11.5px; color: var(--ink-muted); }
 
+.nav { display: flex; flex-direction: column; gap: 2px; }
+
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -181,25 +199,47 @@ a { color: inherit; }
   text-decoration: none;
   font-size: 13.5px;
   font-weight: 550;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.14s, color 0.14s, transform 0.14s;
 }
 
 .nav-item:hover { background: var(--surface-2); color: var(--ink); }
-
+.nav-item:active { transform: scale(0.985); }
 .nav-item.active { background: var(--surface-2); color: var(--ink); font-weight: 650; }
 
-.nav-swatch {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ink-muted);
+/* Marcador do item aberto, na cor do próprio pilar. */
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 17px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ink);
+}
+.nav-item.active:has(.nav-icon.financeiro)::before { background: var(--s-financeiro); }
+.nav-item.active:has(.nav-icon.faculdade)::before { background: var(--s-faculdade); }
+.nav-item.active:has(.nav-icon.projetos)::before { background: var(--s-projetos); }
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--surface-3);
+  color: var(--ink-muted);
+  transition: background 0.14s, color 0.14s;
 }
 
-.nav-item.active .nav-swatch { background: var(--accent, var(--ink)); }
-.nav-swatch.faculdade { background: var(--s-faculdade); }
-.nav-swatch.projetos { background: var(--s-projetos); }
-.nav-swatch.financeiro { background: var(--s-financeiro); }
+.nav-icon.financeiro { background: var(--s-financeiro-wash); color: var(--success-text); }
+.nav-icon.faculdade { background: var(--s-faculdade-wash); color: var(--s-faculdade); }
+.nav-icon.projetos { background: var(--s-projetos-wash); color: var(--s-projetos); }
+
+.nav-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .nav-count {
   margin-left: auto;
@@ -210,11 +250,50 @@ a { color: inherit; }
   border-radius: 999px;
   padding: 1px 7px;
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .nav-count.alert { background: var(--st-critical-wash); color: var(--st-critical); }
 
-.sidebar-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+/* Sub-itens da seção aberta (contas, disciplinas). */
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px 20px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+  animation: revelar 0.18s ease;
+}
+
+@keyframes revelar { from { opacity: 0; transform: translateY(-3px); } }
+
+.nav-subitem {
+  padding: 6px 9px;
+  border-radius: var(--r-sm);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 520;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s, color 0.12s;
+}
+
+.nav-subitem:hover { background: var(--surface-2); color: var(--ink); }
+.nav-subitem.active { color: var(--ink); font-weight: 640; background: var(--surface-2); }
+
+.sidebar-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-foot .btn { width: 100%; justify-content: flex-start; }
 
 /* -------------------------------- Main ---------------------------------- */
 
@@ -340,6 +419,10 @@ a { color: inherit; }
 
 .list li:last-child { border-bottom: none; }
 .list .grow { flex: 1; min-width: 0; }
+
+/* Linha inteira clicável (disciplina → sua página) */
+.linha-link { text-decoration: none; color: inherit; display: block; border-radius: var(--r-sm); }
+.linha-link:hover .title { text-decoration: underline; }
 .list .title { font-weight: 550; }
 .list .meta { font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
 
@@ -442,6 +525,19 @@ a { color: inherit; }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
 .legend-key { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+/* Par de números dentro de um card (renda estimada / já faturado) */
+.mini-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+}
+
+.mini-valor { font-size: 16px; font-weight: 660; }
 
 /* Medidor de meta */
 .meter { margin-bottom: 16px; min-width: 220px; }
@@ -588,6 +684,43 @@ table.sheet .row-actions { justify-content: flex-end; }
 
 /* ------------------------------ Utilitários ------------------------------ */
 
+/* Link de volta nas páginas de detalhe */
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 570;
+  color: var(--ink-muted);
+  text-decoration: none;
+  margin-bottom: 14px;
+  padding: 4px 8px 4px 0;
+  transition: color 0.12s;
+}
+.voltar:hover { color: var(--ink); }
+
+/* Nota lançada de uma avaliação */
+.nota-chip {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--s-faculdade-wash);
+  color: var(--s-faculdade);
+  border-radius: var(--r-sm);
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+/* Corpo de um resumo — preserva as quebras de linha digitadas */
+.resumo-texto {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .section { margin-top: 26px; }
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .section-title { font-size: 15px; font-weight: 660; margin: 0; display: flex; align-items: center; gap: 8px; }
@@ -621,10 +754,13 @@ table.sheet .row-actions { justify-content: flex-end; }
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .brand { padding: 0 10px 0 0; }
+  .brand { padding: 0 10px 0 0; margin: 0; }
   .brand-text { display: none; }
   .sidebar-foot { display: none; }
+  .nav { flex-direction: row; gap: 2px; }
   .nav-item { padding: 7px 11px; white-space: nowrap; }
+  .nav-item.active::before { display: none; }
+  .nav-sub { display: none; }
   .nav-count { display: none; }
   .main { padding: 20px 16px 48px; }
   /* minmax(0, 1fr) impede que o conteúdo estique a coluna além da tela. */

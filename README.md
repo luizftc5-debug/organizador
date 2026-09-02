@@ -27,9 +27,19 @@ Não é preciso editar nenhum arquivo. Tudo se cadastra pelos botões das telas:
 | Onde | O que dá para fazer |
 |---|---|
 | **Visão geral** | Saldo, alertas de atraso e de semana cheia, agenda dos próximos 30 dias, leitura automática da situação |
-| **Financeiro** | Lançar receitas e despesas, ver gastos por categoria e por mês, acompanhar metas |
-| **Faculdade** | Disciplinas com nota e data de prova, prazos e entregas com marcação de concluído |
-| **Projetos** | Projetos divididos em etapas, com barra de progresso, e oportunidades de renda |
+| **Financeiro** | Lançar receitas e despesas (dizendo de qual conta ou cartão saíram), ver gastos por categoria e por mês, acompanhar metas |
+| **Contas e cartões** | Cadastrar contas com saldo, cadastrar cartões com fechamento e vencimento, ver a fatura aberta e o balanço de cada um |
+| **Faculdade** | Disciplinas, prazos e entregas. Cada disciplina abre em **página própria**, com avaliações e notas, prazos, materiais e resumos |
+| **Projetos** | Só iniciativas pessoais que geram renda, divididas em etapas, com renda estimada e o que já foi faturado |
+
+> Trabalhos da faculdade e o TCC ficam em **Faculdade**, não em Projetos.
+
+### Como funcionam o saldo e a fatura
+
+- O saldo de cada conta parte do valor informado no cadastro e se atualiza sozinho a cada lançamento.
+- A fatura do cartão junta as compras do ciclo atual: compras feitas depois do dia do fechamento já
+  entram na fatura seguinte.
+- Para um lançamento entrar nesse balanço, escolha em **"Pago com"** de qual conta ou cartão ele saiu.
 
 Excluiu algo sem querer? O aviso que aparece embaixo traz **Desfazer**.
 
@@ -69,15 +79,18 @@ corrigir — inclusive mostrando a origem que precisa ser registrada.
 
 ```
 dashboard/
-  index.html      home.js         visão geral
-  financeiro.html financeiro.js   lançamentos, gráficos e metas
-  faculdade.html  faculdade.js    disciplinas, provas e entregas
-  projetos.html   projetos.js     projetos por etapas e oportunidades
-  store.js                        dados: localStorage, CRUD e backup
-  ui.js                           modais, avisos, gráficos, datas
-  theme.css                       design system (claro/escuro)
-  config.js       google-integration.js   integração com o Google
-  data.js                         conteúdo inicial (lido só na 1ª abertura)
+  index.html       home.js         visão geral
+  financeiro.html  financeiro.js   lançamentos, gráficos e metas
+  contas.html      contas.js       contas, cartões e balanço
+  faculdade.html   faculdade.js    lista de disciplinas e prazos
+  disciplina.html  disciplina.js   página de uma disciplina
+  projetos.html    projetos.js     projetos de renda e oportunidades
+  store.js                         dados: localStorage, CRUD e backup
+  financas.js                      saldo por conta, fatura por cartão
+  ui.js                            modais, avisos, gráficos, datas
+  theme.css                        design system (claro/escuro)
+  config.js        google-integration.js   integração com o Google
+  data.js                          conteúdo inicial (lido só na 1ª abertura)
 ```
 
 O arquivo `CLAUDE.md` traz as instruções do agente que acompanha este repositório.

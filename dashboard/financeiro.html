@@ -18,6 +18,7 @@
             <p class="sub">Receitas, despesas, metas e documentos do Drive.</p>
           </div>
           <div class="topbar-actions">
+            <a class="btn" href="contas.html">Contas e cartões</a>
             <button class="btn" id="btn-meta">+ Meta</button>
             <button class="btn primary" id="btn-lancamento">+ Lançamento</button>
           </div>
@@ -27,6 +28,7 @@
           <div class="card">
             <div class="stat-label">Saldo atual</div>
             <div class="stat-value num" id="s-saldo">—</div>
+            <div class="stat-sub" id="s-saldo-d"></div>
             <button class="btn ghost sm" id="btn-saldo" style="margin-top:6px;">Ajustar</button>
           </div>
           <div class="card">
@@ -110,6 +112,7 @@
   <script src="data.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
+  <script src="financas.js"></script>
   <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
   <script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
   <script src="google-integration.js"></script>

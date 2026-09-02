@@ -100,9 +100,18 @@ const UI = (() => {
       itens.push({ id: p.id, titulo: p.descricao, data: p.data, area: "faculdade", tipo: p.tipo || "entrega", concluido: !!p.concluido });
     });
 
+    // Avaliações agendadas de cada disciplina. Uma avaliação com nota lançada
+    // já aconteceu, então sai da agenda.
     e.faculdade.disciplinas.forEach((d) => {
-      if (!d.proximaAvaliacao) return;
-      itens.push({ id: d.id, titulo: `Prova — ${d.nome}`, data: d.proximaAvaliacao, area: "faculdade", tipo: "prova", concluido: false });
+      (d.avaliacoes || []).forEach((a) => {
+        if (!a.data) return;
+        const feita = a.nota !== null && a.nota !== undefined && a.nota !== "";
+        if (feita && !incluirConcluidos) return;
+        itens.push({
+          id: a.id, titulo: `${a.nome || "Avaliação"} — ${d.nome}`, data: a.data,
+          area: "faculdade", tipo: "prova", concluido: feita, disciplinaId: d.id,
+        });
+      });
     });
 
     e.projetos.forEach((p) => {
@@ -145,11 +154,14 @@ const UI = (() => {
   /* -------------------------------- Layout -------------------------------- */
 
   const PAGINAS = [
-    { id: "home", rotulo: "Visão geral", href: "index.html", cor: "" },
-    { id: "financeiro", rotulo: "Financeiro", href: "financeiro.html", cor: "financeiro" },
-    { id: "faculdade", rotulo: "Faculdade", href: "faculdade.html", cor: "faculdade" },
-    { id: "projetos", rotulo: "Projetos", href: "projetos.html", cor: "projetos" },
+    { id: "home", rotulo: "Visão geral", href: "index.html", cor: "", icone: "◆" },
+    { id: "financeiro", rotulo: "Financeiro", href: "financeiro.html", cor: "financeiro", icone: "$" },
+    { id: "faculdade", rotulo: "Faculdade", href: "faculdade.html", cor: "faculdade", icone: "▤" },
+    { id: "projetos", rotulo: "Projetos", href: "projetos.html", cor: "projetos", icone: "◇" },
   ];
+
+  // Páginas de detalhe se acendem no item de nível de cima a que pertencem.
+  const GRUPO_DE = { contas: "financeiro", disciplina: "faculdade" };
 
   function contagens() {
     const e = Store.estado();
@@ -165,36 +177,88 @@ const UI = (() => {
     };
   }
 
-  function montarLayout(ativo) {
+  function iniciais(nome) {
+    const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return "•";
+    return (partes[0][0] + (partes[1]?.[0] || "")).toUpperCase();
+  }
+
+  // Sub-itens aparecem só sob a seção aberta, para a barra não crescer sem fim.
+  function subItens(grupo, ativo, idAtivo) {
+    if (grupo === "financeiro") {
+      return [{ rotulo: "Contas e cartões", href: "contas.html", ativo: ativo === "contas" }];
+    }
+    if (grupo === "faculdade") {
+      return Store.lista("faculdade.disciplinas")
+        .filter((d) => d.status !== "concluída")
+        .slice(0, 8)
+        .map((d) => ({
+          rotulo: d.nome,
+          href: `disciplina.html?id=${encodeURIComponent(d.id)}`,
+          ativo: ativo === "disciplina" && idAtivo === d.id,
+        }));
+    }
+    return [];
+  }
+
+  function montarLayout(ativo, { idAtivo = "" } = {}) {
     const el = document.getElementById("sidebar");
     if (!el) return;
     const c = contagens();
+    const perfil = Store.estado().perfil || {};
+    const grupoAtivo = GRUPO_DE[ativo] || ativo;
+
+    const itens = PAGINAS.map((p) => {
+      const aberto = p.id === grupoAtivo;
+      const subs = aberto ? subItens(p.id, ativo, idAtivo) : [];
+      return `
+        <a class="nav-item ${aberto ? "active" : ""}" href="${p.href}">
+          <span class="nav-icon ${p.cor}">${p.icone}</span>
+          <span class="nav-label">${p.rotulo}</span>
+          ${c[p.id] ? `<span class="nav-count ${p.id === "home" ? "alert" : ""}">${c[p.id]}</span>` : ""}
+        </a>
+        ${subs.length ? `<div class="nav-sub">${subs
+          .map((s) => `<a class="nav-subitem ${s.ativo ? "active" : ""}" href="${s.href}" title="${fmt.escape(s.rotulo)}">${fmt.escape(s.rotulo)}</a>`)
+          .join("")}</div>` : ""}`;
+    }).join("");
+
     el.innerHTML = `
-      <div class="brand">
-        <div class="brand-mark">O</div>
+      <a class="brand" href="index.html">
+        <div class="brand-mark">${fmt.escape(iniciais(perfil.nome))}</div>
         <div class="brand-text">
-          <div class="brand-name">Organizador</div>
-          <div class="brand-sub">Luiz · Medicina</div>
+          <div class="brand-name">${fmt.escape(perfil.nome || "")}</div>
+          <div class="brand-sub">${fmt.escape(perfil.curso || "")}</div>
         </div>
-      </div>
-      ${PAGINAS.map((p) => `
-        <a class="nav-item ${p.id === ativo ? "active" : ""}" href="${p.href}">
-          <span class="nav-swatch ${p.cor}"></span>
-          <span>${p.rotulo}</span>
-          ${c[p.id] ? `<span class="nav-count ${p.id === "home" && c.home ? "alert" : ""}">${c[p.id]}</span>` : ""}
-        </a>`).join("")}
+      </a>
+      <nav class="nav">${itens}</nav>
       <div class="sidebar-foot">
-        <button class="btn ghost sm" id="btn-tema" style="width:100%; justify-content:flex-start;">
-          <span id="tema-icone">◐</span> <span id="tema-texto">Tema</span>
-        </button>
-        <button class="btn ghost sm" id="btn-backup" style="width:100%; justify-content:flex-start;">
-          ⤓ Backup
-        </button>
+        <button class="btn ghost sm" id="btn-tema"><span id="tema-icone">◐</span> <span id="tema-texto">Tema</span></button>
+        <button class="btn ghost sm" id="btn-backup">⤓ Backup</button>
       </div>`;
 
     document.getElementById("btn-tema").addEventListener("click", tema.alternar);
     document.getElementById("btn-backup").addEventListener("click", abrirBackup);
     tema.aplicarRotulo();
+  }
+
+  /* --------------------------- Notas da disciplina ------------------------- */
+
+  /** Média ponderada das avaliações que já têm nota lançada. */
+  function mediaDisciplina(d) {
+    const comNota = (d.avaliacoes || []).filter(
+      (a) => a.nota !== null && a.nota !== undefined && a.nota !== "" && !Number.isNaN(Number(a.nota))
+    );
+    if (!comNota.length) return null;
+    const pesoTotal = comNota.reduce((s, a) => s + (Number(a.peso) || 1), 0);
+    const soma = comNota.reduce((s, a) => s + Number(a.nota) * (Number(a.peso) || 1), 0);
+    return { media: soma / pesoTotal, quantidade: comNota.length };
+  }
+
+  /** Próxima avaliação ainda sem nota. */
+  function proximaAvaliacao(d) {
+    return (d.avaliacoes || [])
+      .filter((a) => a.data && (a.nota === null || a.nota === undefined || a.nota === ""))
+      .sort((a, b) => a.data.localeCompare(b.data))[0] || null;
   }
 
   /* --------------------------------- Tema --------------------------------- */
@@ -592,14 +656,19 @@ const UI = (() => {
 
   /* ------------------------------ Inicialização ---------------------------- */
 
-  function iniciarPagina(ativo) {
+  function iniciarPagina(ativo, opcoes) {
     tema.iniciar();
-    montarLayout(ativo);
+    montarLayout(ativo, opcoes);
+  }
+
+  /** Lê um parâmetro da URL (usado pelas páginas de detalhe). */
+  function parametro(nome) {
+    return new URLSearchParams(window.location.search).get(nome) || "";
   }
 
   return {
-    fmt, hojeISO, mesAtual, mesAnterior, diasAte, urgencia, chaveSemana,
-    compromissos, conflitos, contagens,
+    fmt, hojeISO, mesAtual, mesAnterior, diasAte, urgencia, chaveSemana, parametro,
+    compromissos, conflitos, contagens, mediaDisciplina, proximaAvaliacao,
     iniciarPagina, montarLayout, tema, toast, formulario, confirmar, abrirModal,
     abrirBackup, vazio, barras, colunasMensais, medidor,
   };

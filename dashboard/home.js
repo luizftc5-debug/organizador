@@ -31,8 +31,10 @@
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
 
-    // Herói: saldo atual
-    document.getElementById("hero-saldo").textContent = fmt.moeda(e.financeiro.saldoAtual);
+    // Herói: saldo atual (soma das contas, ou o valor informado à mão enquanto
+    // não houver contas cadastradas)
+    document.getElementById("hero-saldo").textContent = fmt.moeda(Financas.saldoTotal());
+    document.getElementById("btn-saldo").classList.toggle("hidden", Financas.temContas());
     const detalhe = document.getElementById("hero-detalhe");
     if (atual.quantidade === 0) {
       detalhe.innerHTML = `<span class="muted">Nenhum lançamento neste mês ainda.</span>`;
@@ -123,11 +125,17 @@
         valor: `${e.faculdade.disciplinas.length}`,
         sub: `${e.faculdade.disciplinas.length === 1 ? "disciplina" : "disciplinas"} · ${urgentes("faculdade")} ${urgentes("faculdade") === 1 ? "prazo" : "prazos"} nesta semana`,
       },
-      {
-        href: "projetos.html", cor: "projetos", titulo: "Projetos",
-        valor: `${e.projetos.filter((p) => p.status !== "concluído").length}`,
-        sub: `${e.projetos.filter((p) => p.status !== "concluído").length === 1 ? "projeto ativo" : "projetos ativos"} · ${e.oportunidades.length} ${e.oportunidades.length === 1 ? "oportunidade" : "oportunidades"}`,
-      },
+      (() => {
+        const ativos = e.projetos.filter((p) => p.status !== "concluído" && p.status !== "arquivado");
+        const renda = ativos.reduce((s, p) => s + (Number(p.rendaEstimada) || 0), 0);
+        return {
+          href: "projetos.html", cor: "projetos", titulo: "Projetos",
+          valor: `${ativos.length}`,
+          sub: renda
+            ? `${ativos.length === 1 ? "projeto ativo" : "projetos ativos"} · ${fmt.moedaCurta(renda)}/mês estimados`
+            : `${ativos.length === 1 ? "projeto ativo" : "projetos ativos"} · ${e.oportunidades.length} ${e.oportunidades.length === 1 ? "oportunidade" : "oportunidades"}`,
+        };
+      })(),
     ];
 
     grid.innerHTML = cartoes

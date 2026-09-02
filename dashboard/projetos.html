@@ -14,7 +14,7 @@
         <header class="topbar">
           <div>
             <h1>Projetos</h1>
-            <p class="sub">Projetos científicos, side hustles e iniciativas paralelas.</p>
+            <p class="sub">Iniciativas pessoais que geram renda. Trabalhos da faculdade e o TCC ficam em <a href="faculdade.html">Faculdade</a>.</p>
           </div>
           <div class="topbar-actions">
             <button class="btn" id="btn-oportunidade">+ Oportunidade</button>
@@ -22,21 +22,26 @@
           </div>
         </header>
 
-        <div class="grid g3" style="margin-bottom:14px;">
+        <div class="grid g4" style="margin-bottom:14px;">
           <div class="card">
             <div class="stat-label">Projetos ativos</div>
             <div class="stat-value num" id="s-ativos">—</div>
             <div class="stat-sub" id="s-ativos-d"></div>
           </div>
           <div class="card">
+            <div class="stat-label">Renda potencial</div>
+            <div class="stat-value num" id="s-renda">—</div>
+            <div class="stat-sub" id="s-renda-d"></div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Já faturado</div>
+            <div class="stat-value num" id="s-faturado">—</div>
+            <div class="stat-sub" id="s-faturado-d"></div>
+          </div>
+          <div class="card">
             <div class="stat-label">Etapas concluídas</div>
             <div class="stat-value num" id="s-etapas">—</div>
             <div class="stat-sub" id="s-etapas-d"></div>
-          </div>
-          <div class="card">
-            <div class="stat-label">Deadline mais próximo</div>
-            <div class="stat-value" id="s-deadline" style="font-size:19px;">—</div>
-            <div class="stat-sub" id="s-deadline-d"></div>
           </div>
         </div>
 
@@ -45,7 +50,7 @@
         <section class="section">
           <div class="section-head">
             <h2 class="section-title">Oportunidades de renda</h2>
-            <span class="card-note">ideias compatíveis com a carga da faculdade</span>
+            <span class="card-note">ideias ainda não viraram projeto</span>
           </div>
           <div class="card"><div id="oportunidades"></div></div>
         </section>
@@ -56,6 +61,7 @@
   <script src="data.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
+  <script src="financas.js"></script>
   <script src="projetos.js"></script>
 </body>
 </html>
