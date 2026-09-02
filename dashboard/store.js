@@ -44,7 +44,7 @@ const Store = (() => {
 
   function estadoVazio() {
     return {
-      versao: 4,
+      versao: 5,
       atualizadoEm: new Date().toISOString(),
       perfil: { ...PERFIL_PADRAO },
       financeiro: {
@@ -55,10 +55,12 @@ const Store = (() => {
         metas: [],
         contas: [],
         cartoes: [],
+        investimentos: [],
       },
       faculdade: { disciplinas: [], prazos: [] },
       projetos: [],
       oportunidades: [],
+      pessoal: { compromissos: [] },
     };
   }
 
@@ -189,6 +191,8 @@ const Store = (() => {
     out.financeiro.metas = e.financeiro?.metas || [];
     out.financeiro.contas = e.financeiro?.contas || [];
     out.financeiro.cartoes = e.financeiro?.cartoes || [];
+    // v4 → v5: investimentos passam a ter aba própria (renda fixa, ações, etc.).
+    out.financeiro.investimentos = e.financeiro?.investimentos || [];
     out.financeiro.categorias = e.financeiro?.categorias?.length ? e.financeiro.categorias : [...CATEGORIAS_PADRAO];
 
     // v2 → v3: lançamento passa a saber de qual conta ou cartão saiu.
@@ -218,7 +222,9 @@ const Store = (() => {
     out.faculdade.prazos = (e.faculdade?.prazos || []).map((p) => ({ disciplinaId: "", ...p }));
     out.projetos = (Array.isArray(e.projetos) ? e.projetos : []).map((p) => ({ rendaEstimada: null, ...p }));
     out.oportunidades = Array.isArray(e.oportunidades) ? e.oportunidades : [];
-    out.versao = 4;
+    // v4 → v5: aba nova para compromissos pessoais (consultas, tarefas, recados).
+    out.pessoal = { compromissos: e.pessoal?.compromissos || [] };
+    out.versao = 5;
     return out;
   }
 

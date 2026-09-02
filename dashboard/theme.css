@@ -37,9 +37,11 @@
   --s-faculdade: #2a78d6;
   --s-projetos: #eb6834;
   --s-financeiro: #1baf7a;
+  --s-pessoal: #8952d6;
   --s-faculdade-wash: rgba(42, 120, 214, 0.10);
   --s-projetos-wash: rgba(235, 104, 52, 0.10);
   --s-financeiro-wash: rgba(27, 175, 122, 0.10);
+  --s-pessoal-wash: rgba(137, 82, 214, 0.10);
 
   /* Status (reservado — nunca usado como série) */
   --st-good: #0ca30c;
@@ -94,9 +96,11 @@
     --s-faculdade: #4d92e8;
     --s-projetos: #f0763f;
     --s-financeiro: #23bd85;
+    --s-pessoal: #a479e8;
     --s-faculdade-wash: rgba(77, 146, 232, 0.16);
     --s-projetos-wash: rgba(240, 118, 63, 0.16);
     --s-financeiro-wash: rgba(35, 189, 133, 0.16);
+    --s-pessoal-wash: rgba(164, 121, 232, 0.16);
 
     --st-good-wash: rgba(12, 163, 12, 0.18);
     --st-warning-wash: rgba(250, 178, 25, 0.18);
@@ -137,9 +141,11 @@
   --s-faculdade: #4d92e8;
   --s-projetos: #f0763f;
   --s-financeiro: #23bd85;
+  --s-pessoal: #a479e8;
   --s-faculdade-wash: rgba(77, 146, 232, 0.16);
   --s-projetos-wash: rgba(240, 118, 63, 0.16);
   --s-financeiro-wash: rgba(35, 189, 133, 0.16);
+  --s-pessoal-wash: rgba(164, 121, 232, 0.16);
 
   --st-good-wash: rgba(12, 163, 12, 0.18);
   --st-warning-wash: rgba(250, 178, 25, 0.18);
@@ -312,6 +318,7 @@ a { color: inherit; }
 .nav-item.active:has(.nav-icon.financeiro)::before { background: var(--s-financeiro); }
 .nav-item.active:has(.nav-icon.faculdade)::before { background: var(--s-faculdade); }
 .nav-item.active:has(.nav-icon.projetos)::before { background: var(--s-projetos); }
+.nav-item.active:has(.nav-icon.pessoal)::before { background: var(--s-pessoal); }
 
 .nav-icon {
   width: 22px;
@@ -330,9 +337,11 @@ a { color: inherit; }
 .nav-icon.financeiro { background: rgba(27, 175, 122, 0.20); color: #4fd6a4; }
 .nav-icon.faculdade { background: rgba(42, 120, 214, 0.22); color: #77b1f5; }
 .nav-icon.projetos { background: rgba(235, 104, 52, 0.20); color: #f79267; }
+.nav-icon.pessoal { background: rgba(137, 82, 214, 0.20); color: #b895f0; }
 .nav-item.active .nav-icon.financeiro { color: #4fd6a4; }
 .nav-item.active .nav-icon.faculdade { color: #77b1f5; }
 .nav-item.active .nav-icon.projetos { color: #f79267; }
+.nav-item.active .nav-icon.pessoal { color: #b895f0; }
 
 .nav-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 
@@ -449,6 +458,7 @@ a { color: inherit; }
 .eyebrow.financeiro { color: var(--success-text); }
 .eyebrow.faculdade { color: var(--s-faculdade); }
 .eyebrow.projetos { color: var(--s-projetos); }
+.eyebrow.pessoal { color: var(--s-pessoal); }
 
 /* ------------------------------- Buttons -------------------------------- */
 
@@ -520,6 +530,7 @@ a { color: inherit; }
 .card.tinted.financeiro { --tint: var(--s-financeiro); }
 .card.tinted.faculdade { --tint: var(--s-faculdade); }
 .card.tinted.projetos { --tint: var(--s-projetos); }
+.card.tinted.pessoal { --tint: var(--s-pessoal); }
 
 .card-head {
   display: flex;
@@ -536,6 +547,7 @@ a { color: inherit; }
 .swatch.faculdade { background: var(--s-faculdade); }
 .swatch.projetos { background: var(--s-projetos); }
 .swatch.financeiro { background: var(--s-financeiro); }
+.swatch.pessoal { background: var(--s-pessoal); }
 
 /* Cartão clicável de pilar */
 .pillar {
@@ -556,6 +568,7 @@ a { color: inherit; }
 .pillar.financeiro { --tint: var(--s-financeiro); }
 .pillar.faculdade { --tint: var(--s-faculdade); }
 .pillar.projetos { --tint: var(--s-projetos); }
+.pillar.pessoal { --tint: var(--s-pessoal); }
 .pillar:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-lift); }
 .pillar .arrow { color: var(--ink-muted); font-size: 12px; margin-top: 14px; font-weight: 600; }
 .pillar:hover .arrow { color: var(--ink); }
@@ -670,6 +683,7 @@ a { color: inherit; }
 .badge.faculdade { background: var(--s-faculdade-wash); color: var(--s-faculdade); }
 .badge.projetos { background: var(--s-projetos-wash); color: var(--s-projetos); }
 .badge.financeiro { background: var(--s-financeiro-wash); color: var(--success-text); }
+.badge.pessoal { background: var(--s-pessoal-wash); color: var(--s-pessoal); }
 
 /* Urgência — sempre com rótulo textual, nunca só cor */
 .badge.atrasado { background: var(--st-critical-wash); color: var(--st-critical); }

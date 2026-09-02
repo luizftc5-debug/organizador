@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pessoal · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main">
+      <div class="wrap">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow pessoal">Vida fora da faculdade</div>
+            <h1>Pessoal</h1>
+            <p class="sub">Consultas, tarefas e recados que não são nem financeiro, nem faculdade, nem projeto.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn primary" id="btn-compromisso">+ Compromisso</button>
+          </div>
+        </header>
+
+        <div class="grid g3" style="margin-bottom:14px;">
+          <div class="card tinted pessoal">
+            <div class="stat-label">Em aberto</div>
+            <div class="stat-value num" id="s-abertos">—</div>
+            <div class="stat-sub" id="s-abertos-d"></div>
+          </div>
+          <div class="card tinted pessoal">
+            <div class="stat-label">Nesta semana</div>
+            <div class="stat-value num" id="s-semana">—</div>
+            <div class="stat-sub" id="s-semana-d"></div>
+          </div>
+          <div class="card tinted pessoal">
+            <div class="stat-label">Atrasados</div>
+            <div class="stat-value num" id="s-atrasados">—</div>
+            <div class="stat-sub" id="s-atrasados-d"></div>
+          </div>
+        </div>
+
+        <section class="section" style="margin-top:8px;">
+          <div class="section-head">
+            <h2 class="section-title"><span class="swatch pessoal"></span>Compromissos</h2>
+            <label class="filters" style="margin:0;"><input type="checkbox" class="check" id="f-concluidos" /> ver concluídos</label>
+          </div>
+          <div class="card"><div id="lista"></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="arquivos.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
+  <script src="financas.js"></script>
+  <script src="pessoal.js"></script>
+</body>
+</html>

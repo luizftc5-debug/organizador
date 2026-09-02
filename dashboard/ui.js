@@ -126,6 +126,11 @@ const UI = (() => {
       itens.push({ id: m.id, titulo: `Meta — ${m.descricao}`, data: m.prazo, area: "financeiro", tipo: "meta", concluido: pronta });
     });
 
+    (e.pessoal?.compromissos || []).forEach((c) => {
+      if (!c.data || (!incluirConcluidos && c.concluido)) return;
+      itens.push({ id: c.id, titulo: c.descricao, data: c.data, area: "pessoal", tipo: c.tipo || "compromisso", concluido: !!c.concluido });
+    });
+
     return itens.sort((a, b) => a.data.localeCompare(b.data));
   }
 
@@ -155,13 +160,14 @@ const UI = (() => {
 
   const PAGINAS = [
     { id: "home", rotulo: "Visão geral", href: "index.html", cor: "", icone: "◆" },
+    { id: "pessoal", rotulo: "Pessoal", href: "pessoal.html", cor: "pessoal", icone: "●" },
     { id: "financeiro", rotulo: "Financeiro", href: "financeiro.html", cor: "financeiro", icone: "$" },
     { id: "faculdade", rotulo: "Faculdade", href: "faculdade.html", cor: "faculdade", icone: "▤" },
     { id: "projetos", rotulo: "Projetos", href: "projetos.html", cor: "projetos", icone: "◇" },
   ];
 
   // Páginas de detalhe se acendem no item de nível de cima a que pertencem.
-  const GRUPO_DE = { contas: "financeiro", disciplina: "faculdade" };
+  const GRUPO_DE = { contas: "financeiro", conta: "financeiro", investimentos: "financeiro", disciplina: "faculdade" };
 
   function contagens() {
     const e = Store.estado();
@@ -174,6 +180,7 @@ const UI = (() => {
       financeiro: e.financeiro.transacoes.filter((t) => t.status === "pendente").length,
       faculdade: urgentes.filter((i) => i.area === "faculdade").length,
       projetos: urgentes.filter((i) => i.area === "projetos").length,
+      pessoal: urgentes.filter((i) => i.area === "pessoal").length,
     };
   }
 
@@ -194,7 +201,10 @@ const UI = (() => {
   // Sub-itens aparecem só sob a seção aberta, para a barra não crescer sem fim.
   function subItens(grupo, ativo, idAtivo) {
     if (grupo === "financeiro") {
-      return [{ rotulo: "Contas e cartões", href: "contas.html", ativo: ativo === "contas" }];
+      return [
+        { rotulo: "Contas e cartões", href: "contas.html", ativo: ativo === "contas" || ativo === "conta" },
+        { rotulo: "Investimentos", href: "investimentos.html", ativo: ativo === "investimentos" },
+      ];
     }
     if (grupo === "faculdade") {
       return Store.lista("faculdade.disciplinas")

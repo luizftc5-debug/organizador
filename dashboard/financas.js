@@ -157,11 +157,80 @@ const Financas = (() => {
     return transacoes().filter((t) => !t.origem);
   }
 
+  /* --------------------------- Página de uma conta ------------------------- */
+
+  /** Achar a conta ou o cartão por id, em qualquer uma das duas listas. */
+  function achar(id) {
+    const c = contas().find((x) => x.id === id);
+    if (c) return { item: c, tipo: "conta" };
+    const k = cartoes().find((x) => x.id === id);
+    if (k) return { item: k, tipo: "cartao" };
+    return null;
+  }
+
+  /** Gasto por categoria dentro de uma origem — para o gráfico da página de detalhe. */
+  function gastosPorCategoria(origem, lista) {
+    const itens = (lista || lancamentosDe(origem)).filter((t) => t.tipo === "despesa");
+    const porCategoria = {};
+    itens.forEach((t) => {
+      const cat = t.categoria || "Outros";
+      porCategoria[cat] = (porCategoria[cat] || 0) + (Number(t.valor) || 0);
+    });
+    return Object.entries(porCategoria)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }
+
+  /** Resumo completo de uma conta: saldo, entradas, saídas e por categoria. */
+  function resumoConta(conta) {
+    const itens = lancamentosDe(`conta:${conta.id}`);
+    const entradas = itens.filter((t) => t.tipo === "receita").reduce((s, t) => s + (Number(t.valor) || 0), 0);
+    const saidas = itens.filter((t) => t.tipo === "despesa").reduce((s, t) => s + (Number(t.valor) || 0), 0);
+    return {
+      saldo: saldoConta(conta), entradas, saidas, itens,
+      categorias: gastosPorCategoria(null, itens),
+    };
+  }
+
+  /** Resumo completo de um cartão: fatura aberta, total histórico, por categoria. */
+  function resumoCartao(cartao, hoje = new Date()) {
+    const f = faturaCartao(cartao, hoje);
+    const itens = lancamentosDe(`cartao:${cartao.id}`);
+    return {
+      ...f,
+      gastoTotal: gastoTotalCartao(cartao), itens,
+      categorias: gastosPorCategoria(null, itens.filter((t) => t.tipo === "despesa")),
+    };
+  }
+
+  /* ------------------------------ Investimentos ----------------------------- */
+
+  const TIPOS_INVESTIMENTO = ["Renda fixa", "Tesouro Direto", "Ações", "Fundos", "Cripto", "Previdência", "Outro"];
+
+  const investimentos = () => Store.lista("financeiro.investimentos");
+
+  /** Rentabilidade em R$ e % de um investimento — valor atual menos aplicado. */
+  function rentabilidade(inv) {
+    const aplicado = Number(inv.valorAplicado) || 0;
+    const atual = Number(inv.valorAtual ?? inv.valorAplicado) || 0;
+    const ganho = atual - aplicado;
+    return { ganho, percentual: aplicado > 0 ? (ganho / aplicado) * 100 : 0 };
+  }
+
+  /** Totais da carteira: quanto foi aplicado e quanto vale hoje. */
+  function totalInvestimentos() {
+    const lista = investimentos();
+    const aplicado = lista.reduce((s, i) => s + (Number(i.valorAplicado) || 0), 0);
+    const atual = lista.reduce((s, i) => s + (Number(i.valorAtual ?? i.valorAplicado) || 0), 0);
+    return { aplicado, atual, ganho: atual - aplicado, percentual: aplicado > 0 ? ((atual - aplicado) / aplicado) * 100 : 0 };
+  }
+
   return {
-    TIPOS_CONTA, BANDEIRAS,
+    TIPOS_CONTA, BANDEIRAS, TIPOS_INVESTIMENTO,
     partesOrigem, nomeOrigem, opcoesOrigem, lancamentosDe,
     saldoConta, saldoTotal, temContas,
     cicloAtual, faturaCartao, gastoTotalCartao,
-    balanco, semOrigem,
+    balanco, semOrigem, achar, gastosPorCategoria, resumoConta, resumoCartao,
+    investimentos, rentabilidade, totalInvestimentos,
   };
 })();

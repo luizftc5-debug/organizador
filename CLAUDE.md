@@ -1,9 +1,10 @@
 # Agente de Organização Pessoal - Luiz
 
-Você é um assistente de IA especializado em organizar e gerenciar os três pilares principais da vida de Luiz:
-- **Financeiro**: controle de receitas, despesas, metas de ganho, oportunidades de renda
+Você é um assistente de IA especializado em organizar e gerenciar os quatro pilares principais da vida de Luiz:
+- **Financeiro**: controle de receitas, despesas, contas, cartões, investimentos, metas de ganho
 - **Faculdade**: disciplinas, cronograma de estudos, TCC/projetos acadêmicos (metanálise), provas
 - **Projetos**: desenvolvimento de projetos científicos, side hustles, iniciativas paralelas
+- **Pessoal**: compromissos e recados fora dos outros três — consultas médicas, tarefas do dia a dia
 
 ## Contexto sobre Luiz
 - Estudante de Medicina, 6º semestre
@@ -21,16 +22,19 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 |---|---|
 | `index.html` + `home.js` | Visão geral: saldo em destaque, alertas, agenda de 30 dias, leitura automática da situação |
 | `financeiro.html` + `financeiro.js` | Planilha de lançamentos, gráficos por mês e categoria, metas |
-| `contas.html` + `contas.js` | Contas e cartões: saldo de cada conta, fatura de cada cartão, balanço |
+| `contas.html` + `contas.js` | Lista de contas e cartões, com o balanço geral |
+| `conta.html` + `conta.js` | Página de uma conta ou cartão: saldo/fatura, gastos por categoria só dela, lançamentos |
+| `investimentos.html` + `investimentos.js` | Carteira de investimentos: aplicado, valor atual, rentabilidade por tipo |
 | `faculdade.html` + `faculdade.js` | Lista de disciplinas e prazos gerais |
-| `disciplina.html` + `disciplina.js` | Página de uma disciplina: avaliações, prazos, materiais e resumos |
+| `disciplina.html` + `disciplina.js` | Página de uma disciplina: avaliações, prazos, materiais e resumos, com importação do Drive |
 | `projetos.html` + `projetos.js` | Projetos pessoais que geram renda + oportunidades |
+| `pessoal.html` + `pessoal.js` | Compromissos pessoais: consultas, tarefas, recados |
 | `store.js` | Camada de dados: localStorage + CRUD + backup em JSON |
 | `arquivos.js` | Anexos (PDF, slides, fotos) no IndexedDB + export/import para o backup |
-| `financas.js` | Cálculos derivados: saldo por conta, ciclo e fatura de cartão, balanço |
+| `financas.js` | Cálculos derivados: saldo por conta, ciclo e fatura de cartão, balanço, investimentos |
 | `ui.js` | Componentes: layout, perfil, modais de formulário, avisos, gráficos, datas/urgência |
 | `theme.css` | Design system (tema claro/escuro) |
-| `config.js` + `google-integration.js` | Integração OAuth com Google Calendar e Drive |
+| `config.js` + `google-integration.js` | Integração OAuth com Google Calendar e Drive (inclui busca/exportação de arquivos, usada pela importação em disciplina.js) |
 | `data.js` | Conteúdo inicial (seed), lido só na primeira abertura |
 
 ### Divisão entre Faculdade e Projetos
@@ -42,6 +46,14 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 
 Não misture os dois: trabalho acadêmico não vira projeto.
 
+### Pessoal — o quarto pilar
+
+`estado.pessoal.compromissos` guarda o que não é financeiro, faculdade nem projeto: consulta médica,
+levar o carro à revisão, um recado qualquer com data. Cada item tem `tipo` (consulta/tarefa/
+compromisso/recado/outro), `data`, `local` opcional e `concluido`. Entra no `UI.compromissos()`
+unificado com `area: "pessoal"`, então aparece na agenda da home e nos alertas de semana cheia junto
+com os outros três pilares — cor própria (`--s-pessoal`, roxo) para não colidir com as demais.
+
 ### Contas, cartões e saldo
 
 - `financeiro.contas` guarda o `saldoInicial` de cada conta; o saldo atual é **calculado**
@@ -51,6 +63,15 @@ Não misture os dois: trabalho acadêmico não vira projeto.
 - Enquanto não houver nenhuma conta cadastrada, vale o `saldoAtual` informado à mão. Assim que
   existe conta, o campo manual some da interface para os dois números não se contradizerem.
 - Nunca guarde saldo calculado: ele sempre sai dos lançamentos, para não dessincronizar.
+- Cada conta/cartão tem página própria (`conta.html?tipo=conta|cartao&id=`), com os cálculos
+  centralizados em `Financas.resumoConta`/`resumoCartao` — não duplique a lógica de saldo/fatura ali,
+  só formate o que essas funções já devolvem.
+
+### Investimentos
+
+`financeiro.investimentos` é separado dos lançamentos do dia a dia — não usa `origem`, não entra no
+balanço de contas/cartões. Cada item guarda `valorAplicado` e `valorAtual`; a rentabilidade
+(`Financas.rentabilidade`) é sempre `atual − aplicado`, recalculada na hora, nunca armazenada.
 
 ### Página por disciplina
 
@@ -82,6 +103,19 @@ estoura isso sozinho. O IndexedDB aceita centenas de MB e guarda o arquivo como 
   um backup sozinho tem de bastar para reconstruir tudo em outro navegador.
 - Ao excluir um material ou resumo, os arquivos só somem depois que a janela do "Desfazer" passa
   (`excluirComAnexos`), senão desfazer devolveria a ficha sem o PDF.
+
+### Importar do Google Drive na disciplina
+
+`disciplina.html` carrega os mesmos scripts do Google que `faculdade.html`/`financeiro.html`
+(`config.js`, `api.js`, `gsi/client`, `google-integration.js`), então reaproveita a mesma sessão
+OAuth — não pede para conectar de novo se o usuário já autorizou em outra página da mesma aba.
+
+`google-integration.js` expõe `driveConectado()`, `driveBuscarArquivos(termo)` e
+`driveExportarTexto(fileId)` como funções soltas no escopo global do documento (script clássico, não
+módulo) — `disciplina.js` as chama direto pelo nome. `aoConectar(fn)` registra um callback de
+"rodar assim que a autorização terminar", usado para reabrir o seletor de arquivos depois do login.
+Um Google Docs vira **resumo** (texto exportado via `files.export`); qualquer outro arquivo vira
+**material** com o `webViewLink` como URL.
 
 ### Onde os dados vivem — importante
 
@@ -115,7 +149,7 @@ Ao mexer em gráficos, mantenha essas regras.
 ## Funcionalidades
 
 ### 1. Análise de prioridades
-- O dashboard cruza automaticamente prazos dos três pilares e destaca semanas com mais de um
+- O dashboard cruza automaticamente prazos dos quatro pilares e destaca semanas com mais de um
   compromisso, marcando em vermelho quando vêm de áreas diferentes
 - Compromissos atrasados aparecem em destaque na visão geral
 - A "Leitura da situação" gera comparações com o mês anterior, projeção de gastos, contas pendentes
@@ -125,6 +159,7 @@ Ao mexer em gráficos, mantenha essas regras.
 Direto no navegador, via OAuth:
 - **Google Calendar** (em `faculdade.html`): próximos eventos da agenda
 - **Google Drive** (em `financeiro.html`): arquivos recentes
+- **Google Drive** (em `disciplina.html`): busca e importa materiais/resumos de uma disciplina
 
 Exige `CLIENT_ID` preenchido em `dashboard/config.js` e a página aberta por http/https (o Google
 bloqueia `file://`). Quando algo falta, o botão "Conectar ao Google" abre uma caixa explicando o que

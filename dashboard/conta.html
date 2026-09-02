@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conta · Organizador</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="main">
+      <div class="wrap" id="conteudo">
+        <a class="voltar" href="contas.html">← Contas e cartões</a>
+
+        <header class="topbar">
+          <div>
+            <div class="eyebrow financeiro" id="etiqueta">Conta</div>
+            <h1 id="titulo">—</h1>
+            <p class="sub" id="subtitulo"></p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn" id="btn-editar">Editar</button>
+            <button class="btn primary" id="btn-lancamento">+ Lançamento</button>
+          </div>
+        </header>
+
+        <div class="grid g4" style="margin-bottom:14px;" id="stats"></div>
+
+        <div class="grid g2">
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title"><span class="swatch financeiro" id="swatch-categorias"></span>Gastos por categoria</h2>
+            </div>
+            <div id="categorias"></div>
+          </section>
+
+          <section class="card" id="card-limite" style="display:none;">
+            <div class="card-head">
+              <h2 class="card-title">Limite do cartão</h2>
+            </div>
+            <div id="limite"></div>
+          </section>
+        </div>
+
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Lançamentos</h2>
+            <span class="card-note" id="lancamentos-resumo"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="sheet">
+              <thead>
+                <tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Status</th><th style="text-align:right;">Valor</th><th></th></tr>
+              </thead>
+              <tbody id="lancamentos"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="arquivos.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
+  <script src="financas.js"></script>
+  <script src="conta.js"></script>
+</body>
+</html>

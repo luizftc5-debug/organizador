@@ -150,6 +150,14 @@
             : `${ativos.length === 1 ? "projeto ativo" : "projetos ativos"} · ${e.oportunidades.length} ${e.oportunidades.length === 1 ? "oportunidade" : "oportunidades"}`,
         };
       })(),
+      (() => {
+        const abertos = (e.pessoal?.compromissos || []).filter((c) => !c.concluido);
+        return {
+          href: "pessoal.html", cor: "pessoal", titulo: "Pessoal",
+          valor: `${abertos.length}`,
+          sub: `${abertos.length === 1 ? "compromisso em aberto" : "compromissos em aberto"} · ${urgentes("pessoal")} ${urgentes("pessoal") === 1 ? "nesta semana" : "nesta semana"}`,
+        };
+      })(),
     ];
 
     grid.innerHTML = cartoes

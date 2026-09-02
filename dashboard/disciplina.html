@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Disciplina · Organizador</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <script src="config.js"></script>
   <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
@@ -70,7 +71,10 @@
         <section class="section">
           <div class="section-head">
             <h2 class="section-title">Materiais</h2>
-            <button class="btn ghost sm" id="btn-material">+ Material</button>
+            <span style="display:flex; gap:8px;">
+              <button class="btn ghost sm" id="btn-drive">⇩ Importar do Drive</button>
+              <button class="btn ghost sm" id="btn-material">+ Material</button>
+            </span>
           </div>
           <div class="card"><div id="materiais"></div></div>
         </section>
@@ -90,6 +94,9 @@
   <script src="arquivos.js"></script>
   <script src="store.js"></script>
   <script src="ui.js"></script>
+  <script src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+  <script src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
+  <script src="google-integration.js"></script>
   <script src="disciplina.js"></script>
 </body>
 </html>

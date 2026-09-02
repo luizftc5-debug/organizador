@@ -428,7 +428,105 @@
   const excluirMaterial = (m) => excluirComAnexos("materiais", m, "Material");
   const excluirResumo = (r) => excluirComAnexos("resumos", r, "Resumo");
 
+  /* ------------------------- Importar do Google Drive ----------------------- */
+
+  async function importarDoDrive() {
+    if (typeof driveConectado !== "function" || !driveConectado()) {
+      // A conexão acontece de forma assíncrona (janela do Google); quando
+      // terminar, aoConectar chama esta mesma função de novo.
+      if (typeof aoConectar === "function") aoConectar(importarDoDrive);
+      if (typeof conectarGoogle === "function") conectarGoogle();
+      return;
+    }
+    abrirPickerDrive();
+  }
+
+  function abrirPickerDrive() {
+    const html = `
+      <div class="modal-head">
+        <h2 class="modal-title">Importar do Drive</h2>
+        <p class="modal-desc">Busque um arquivo do seu Google Drive. Documentos do Google Docs podem virar resumo automaticamente; os demais entram como material com link.</p>
+      </div>
+      <div class="modal-body">
+        <input class="input" type="text" placeholder="Buscar por nome…" data-busca value="${fmt.escape(disciplina.nome)}" />
+        <div data-resultados style="display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto;"></div>
+      </div>
+      <div class="modal-foot"><button class="btn" data-acao="fechar" type="button">Fechar</button></div>`;
+
+    UI.abrirModal(html, {
+      aoMontar(modal, fechar) {
+        const campo = modal.querySelector("[data-busca]");
+        const box = modal.querySelector("[data-resultados]");
+        let temporizador;
+
+        const buscar = () => {
+          box.innerHTML = `<p class="card-note">Buscando…</p>`;
+          driveBuscarArquivos(campo.value.trim())
+            .then((arquivos) => renderResultadosDrive(arquivos, box, fechar))
+            .catch((err) => { box.innerHTML = `<p class="card-note">${fmt.escape(err.message)}</p>`; });
+        };
+
+        campo.addEventListener("input", () => {
+          clearTimeout(temporizador);
+          temporizador = setTimeout(buscar, 350);
+        });
+        campo.focus();
+        buscar();
+
+        modal.querySelector('[data-acao="fechar"]').addEventListener("click", () => fechar(null));
+      },
+    });
+  }
+
+  function renderResultadosDrive(arquivos, box, fechar) {
+    box.innerHTML = "";
+    if (!arquivos.length) {
+      box.innerHTML = `<p class="card-note">Nenhum arquivo encontrado com esse nome.</p>`;
+      return;
+    }
+    arquivos.forEach((f) => {
+      const ehDoc = driveEhGoogleDocs(f.mimeType);
+      const linha = document.createElement("div");
+      linha.className = "anexo";
+      linha.innerHTML = `
+        <span class="anexo-ic ${ehDoc ? "doc" : ""}">${ehDoc ? "doc" : "arq"}</span>
+        <span class="anexo-nome">${fmt.escape(f.name)}
+          <span class="anexo-meta">modificado em ${fmt.data((f.modifiedTime || "").slice(0, 10))}</span>
+        </span>
+        <button class="btn ghost sm" type="button" data-material>+ Material</button>
+        ${ehDoc ? `<button class="btn sm" type="button" data-resumo>+ Resumo</button>` : ""}`;
+
+      linha.querySelector("[data-material]").addEventListener("click", () => {
+        Store.subInserir(CAMINHO, id, "materiais", { titulo: f.name, tipo: "link", url: f.webViewLink, anexos: [] });
+        UI.toast("Material importado do Drive.");
+        fechar(null);
+        render();
+      });
+
+      const btnResumo = linha.querySelector("[data-resumo]");
+      if (btnResumo) {
+        btnResumo.addEventListener("click", async () => {
+          btnResumo.disabled = true;
+          btnResumo.textContent = "Importando…";
+          try {
+            const texto = await driveExportarTexto(f.id);
+            Store.subInserir(CAMINHO, id, "resumos", { titulo: f.name, conteudo: texto, atualizadoEm: UI.hojeISO(), anexos: [] });
+            UI.toast("Resumo importado do Drive.");
+            fechar(null);
+            render();
+          } catch (err) {
+            UI.toast(`Não foi possível importar: ${err.message}`);
+            btnResumo.disabled = false;
+            btnResumo.textContent = "+ Resumo";
+          }
+        });
+      }
+      box.appendChild(linha);
+    });
+  }
+
   document.getElementById("btn-editar").addEventListener("click", editarDisciplina);
+  document.getElementById("btn-drive").addEventListener("click", importarDoDrive);
   document.getElementById("btn-avaliacao").addEventListener("click", novaAvaliacao);
   document.getElementById("btn-avaliacao-2").addEventListener("click", novaAvaliacao);
   document.getElementById("btn-prazo").addEventListener("click", novoPrazo);

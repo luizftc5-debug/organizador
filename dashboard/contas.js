@@ -82,19 +82,21 @@
       card.className = "card conta-card";
       card.innerHTML = `
         <div class="card-head" style="align-items:flex-start; margin-bottom:8px;">
-          <div style="min-width:0;">
-            <h3 class="card-title" style="font-size:14px;"><span class="swatch financeiro"></span>${fmt.escape(c.nome)}</h3>
+          <a class="linha-link" style="min-width:0;" href="conta.html?tipo=conta&id=${fmt.escape(c.id)}">
+            <h3 class="card-title" style="font-size:14px;"><span class="swatch financeiro"></span><span class="title">${fmt.escape(c.nome)}</span></h3>
             <div class="card-note" style="margin-top:3px;">${fmt.escape(c.instituicao || c.tipo)}</div>
-          </div>
+          </a>
           <span class="row-actions">
             <button class="btn ghost sm" data-editar>Editar</button>
             <button class="btn ghost sm" data-excluir>Excluir</button>
           </span>
         </div>
-        <div class="stat-value num" style="font-size:22px; color:${c.saldo < 0 ? "var(--st-critical)" : "var(--ink)"};">${fmt.moeda(c.saldo)}</div>
-        <div class="stat-sub">
-          abertura ${fmt.moeda(c.saldoInicial || 0)} · ${c.movimentos} ${c.movimentos === 1 ? "lançamento" : "lançamentos"}
-        </div>`;
+        <a href="conta.html?tipo=conta&id=${fmt.escape(c.id)}" style="text-decoration:none; color:inherit; display:block;">
+          <div class="stat-value num" style="font-size:22px; color:${c.saldo < 0 ? "var(--st-critical)" : "var(--ink)"};">${fmt.moeda(c.saldo)}</div>
+          <div class="stat-sub">
+            abertura ${fmt.moeda(c.saldoInicial || 0)} · ${c.movimentos} ${c.movimentos === 1 ? "lançamento" : "lançamentos"}
+          </div>
+        </a>`;
       card.querySelector("[data-editar]").addEventListener("click", () => editarConta(c));
       card.querySelector("[data-excluir]").addEventListener("click", () => excluir("financeiro.contas", c, "Conta"));
       grid.appendChild(card);
@@ -133,10 +135,10 @@
       card.className = "card";
       card.innerHTML = `
         <div class="card-head" style="align-items:flex-start; margin-bottom:10px;">
-          <div style="min-width:0;">
-            <h3 class="card-title" style="font-size:14px;"><span class="swatch projetos"></span>${fmt.escape(c.nome)}</h3>
+          <a class="linha-link" style="min-width:0;" href="conta.html?tipo=cartao&id=${fmt.escape(c.id)}">
+            <h3 class="card-title" style="font-size:14px;"><span class="swatch projetos"></span><span class="title">${fmt.escape(c.nome)}</span></h3>
             <div class="card-note" style="margin-top:3px;">${fmt.escape(c.bandeira || "cartão")} · fecha dia ${c.fechamento} · vence dia ${c.vencimento}</div>
-          </div>
+          </a>
           <span class="row-actions">
             <button class="btn ghost sm" data-editar>Editar</button>
             <button class="btn ghost sm" data-excluir>Excluir</button>

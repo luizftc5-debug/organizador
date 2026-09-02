@@ -14,6 +14,12 @@ let gapiPronto = false;
 let gisPronto = false;
 let tokenClient = null;
 let tokenAcesso = null;
+const aoConectarCallbacks = [];
+
+/** Registra algo para rodar assim que a autorização do Google for concedida. */
+function aoConectar(fn) {
+  aoConectarCallbacks.push(fn);
+}
 
 function origemAtual() {
   return window.location.origin && window.location.origin !== "null"
@@ -73,6 +79,7 @@ function onGisLoad() {
         atualizarEstado(true, "Conectado ao Google");
         buscarEventos();
         buscarArquivos();
+        aoConectarCallbacks.splice(0).forEach((fn) => fn());
       },
     });
     gisPronto = true;
@@ -260,6 +267,39 @@ function buscarArquivos() {
       console.error(err);
       el.innerHTML = `<p class="card-note">Não foi possível ler o Drive. Verifique se a Google Drive API está ativada no seu projeto.</p>`;
     });
+}
+
+/* ------------------- Drive: busca usada pela importação -------------------
+   Reaproveita a mesma conexão OAuth desta página para procurar arquivos do
+   Drive e, quando é um Google Docs, ler o texto — usado em disciplina.js para
+   puxar resumos direto para a matéria. --------------------------------- */
+
+function driveConectado() {
+  return gapiPronto && !!tokenAcesso;
+}
+
+function driveBuscarArquivos(termo, maxResultados = 10) {
+  if (!driveConectado()) return Promise.reject(new Error("Conecte-se ao Google primeiro."));
+  const escapado = String(termo || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  return gapi.client.drive.files
+    .list({
+      pageSize: maxResultados,
+      orderBy: "modifiedTime desc",
+      fields: "files(id, name, mimeType, modifiedTime, webViewLink)",
+      q: `trashed = false${escapado ? ` and name contains '${escapado}'` : ""}`,
+    })
+    .then((resp) => resp.result.files || []);
+}
+
+function driveEhGoogleDocs(mimeType) {
+  return mimeType === "application/vnd.google-apps.document";
+}
+
+/** Exporta o texto de um Google Docs — os demais formatos não têm exportação de texto. */
+function driveExportarTexto(fileId) {
+  return gapi.client.drive.files
+    .export({ fileId, mimeType: "text/plain" })
+    .then((resp) => resp.body || "");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
