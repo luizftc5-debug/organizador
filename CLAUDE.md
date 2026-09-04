@@ -28,6 +28,7 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 | `faculdade.html` + `faculdade.js` | Lista de disciplinas e prazos gerais |
 | `disciplina.html` + `disciplina.js` | Página de uma disciplina: avaliações, prazos, materiais e resumos, com importação do Drive |
 | `projetos.html` + `projetos.js` | Projetos pessoais que geram renda + oportunidades |
+| `projeto.html` + `projeto.js` | Página de um projeto: ficha, etapas, recebimentos, custos, documentos e anotações |
 | `pessoal.html` + `pessoal.js` | Compromissos pessoais: consultas, tarefas, recados |
 | `store.js` | Camada de dados: localStorage + CRUD + backup em JSON |
 | `arquivos.js` | Anexos (PDF, slides, fotos) no IndexedDB + export/import para o backup |
@@ -42,9 +43,25 @@ Aplicação estática multi-página em `dashboard/`, sem build e sem dependênci
 - **Faculdade** cobre tudo que é acadêmico, **incluindo o TCC e a metanálise** — como prazos
   (`tipo: "TCC"`) ou avaliações dentro da disciplina correspondente.
 - **Projetos** é só para iniciativas pessoais com fim financeiro (monitoria, cursinho, freelas,
-  conteúdo). Cada projeto tem `rendaEstimada` (por mês) e `receitaGerada` (total já recebido).
+  conteúdo). Cada projeto tem `rendaEstimada` (esperado por mês, informado à mão) e listas de
+  `recebimentos` e `custos` — o que já entrou e o que já saiu, item a item.
 
 Não misture os dois: trabalho acadêmico não vira projeto.
+
+### Página por projeto
+
+`projeto.html?id=` é onde o projeto vive de verdade; `projetos.html` virou só o panorama, com o
+cartão levando à página e mostrando a próxima etapa em aberto.
+
+Além de `nome`, `status` e `descricao`, o projeto guarda `tipo`, `cliente`, `link`, `inicio`,
+`deadline`, `prioridade`, `horasSemana`, `anotacoes`, `anexos` e as sub-listas `passos`,
+`recebimentos` e `custos` (editadas por `Store.subInserir/subAtualizar/subRemover`).
+
+`UI.resumoProjeto(p)` centraliza tudo que se deduz — `faturado` (soma dos recebimentos),
+`custoTotal`, `lucro`, progresso das etapas e urgência do prazo. **Nada disso é guardado no
+estado**, pela mesma razão do saldo das contas: dois lugares com o mesmo número dessincronizam.
+Foi por isso que o antigo campo `receitaGerada` (total digitado à mão) deixou de existir na v6 —
+a migração o converte no primeiro recebimento da lista.
 
 ### Pessoal — o quarto pilar
 
@@ -79,15 +96,22 @@ Cada disciplina tem `avaliacoes`, `materiais` e `resumos` como listas dentro del
 `Store.subInserir/subAtualizar/subRemover`. A média é ponderada pelo `peso` das avaliações com nota
 lançada (`UI.mediaDisciplina`). Prazos apontam para a disciplina por `disciplinaId`.
 
-### Perfil do usuário
+### Perfil do usuário — e os ajustes do painel
 
-`estado.perfil` guarda nome, curso, semestre, instituição, cidade, e-mail e `foto`. A foto é uma
-data URL: `UI.redimensionarFoto` recorta o centro em quadrado e reduz para 256px em JPEG antes de
-salvar, para caber com folga no localStorage. Sem foto, o avatar mostra as iniciais do nome.
+`estado.perfil` guarda identidade (nome, `dataNascimento`, telefone, e-mail, cidade, `foto`), vida
+acadêmica (curso, instituição, semestre, matrícula, `ingresso`) e dois textos livres (`bio`,
+`objetivos`). A foto é uma data URL: `UI.redimensionarFoto` recorta o centro em quadrado e reduz
+para 256px em JPEG antes de salvar, para caber com folga no localStorage. Sem foto, o avatar
+mostra as iniciais do nome. A idade sai de `UI.idade(dataNascimento)`, nunca é guardada.
 
-O cartão de perfil (`UI.abrirPerfil`) abre pelo botão do nome na barra lateral. Depois de gravar,
-ele chama `montarLayout` de novo para a barra refletir a mudança na hora — por isso `ui.js` guarda
-a página ativa em `paginaAtiva`/`opcoesAtivas`.
+O cartão de perfil (`UI.abrirPerfil`) abre pelo botão do nome na barra lateral e é **o único lugar
+de configuração do painel**: ficha de dados, troca de tema e acesso ao backup ficam todos ali. O
+rodapé da barra lateral não guarda mais botões, só um lembrete de onde eles foram parar. Depois de
+gravar, `abrirPerfil` chama `montarLayout` de novo para a barra refletir a mudança na hora — por
+isso `ui.js` guarda a página ativa em `paginaAtiva`/`opcoesAtivas`.
+
+Formulários longos (o de perfil, o do projeto) usam o tipo de campo `secao`, que só desenha um
+título divisor e não guarda valor, e a opção `largo: true` para abrir o modal mais largo.
 
 ### Anexos
 
@@ -132,12 +156,24 @@ telas (botões "+ Lançamento", "+ Prazo", "+ Disciplina", "+ Projeto"), sem toc
 
 ### Direção visual
 
-"Caderno clínico": papel quente, títulos e números-título em serifa (`--font-display`), e a coluna
-lateral escura nos **dois** temas — é ela que dá identidade ao painel, então tem tokens próprios
-(`--nav-*`), separados das superfícies do conteúdo. Cartões usam traço fino e um filete na cor do
-pilar (`.card.tinted`, `.pillar`) em vez de sombra pesada. A etiqueta acima do título (`.eyebrow`)
-dá hierarquia sem inventar mais um tamanho de fonte — em página de detalhe ela não deve repetir o
-que o link "voltar" já diz.
+"Estúdio": porcelana fria (`--page`) com cartões brancos de traço fino, cantos pequenos e retos
+(9px no cartão, 6px no controle), tipografia grotesca pesada com entrelinha bem apertada nos
+títulos, e micro-rótulos em **monoespaçada** maiúscula (`--font-mono`) — é essa a assinatura
+tipográfica, aplicada de uma vez só a `.eyebrow`, `.stat-label`, `.badge`, `th` e afins.
+
+A regra que organiza tudo: **o cromo é monocromático**. Preto, branco e cinza na interface — botão
+primário, foco, item ativo, todos em `--ink`. Cor só para dado (os quatro pilares) e para urgência.
+Assim nada compete com a informação e a cor sempre significa alguma coisa.
+
+O bloco escuro é peça pontual, não mais a coluna inteira: a marca do perfil na barra lateral e o
+painel do saldo na home (`.hero`) usam os tokens `--slab-*`, e é esse contraste que ancora a
+página. A barra lateral ficou clara, um tom abaixo da página, com o item aberto virando um cartão
+branco elevado — leitura por elevação, não por cor.
+
+Outros sinais: barra do pilar na borda esquerda do cartão (`.card.tinted`, `.pillar`), régua sob o
+cabeçalho de seção (`.section-head`) e sob o topo da página (`.topbar`), e `.swatch` quadrado em vez
+de redondo. A etiqueta acima do título (`.eyebrow`) dá hierarquia sem inventar mais um tamanho de
+fonte — em página de detalhe ela não deve repetir o que o link "voltar" já diz.
 
 ### Cores de dados
 

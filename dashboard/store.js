@@ -14,13 +14,22 @@ const Store = (() => {
   const KEY_LEGADO_TRANSACOES = "organizador.financeiro.transacoes.v1";
 
   const PERFIL_PADRAO = {
+    // Identidade
     nome: "Luiz Felipe Tonhá",
-    curso: "Medicina",
-    semestre: "",
-    instituicao: "",
+    dataNascimento: "",
     cidade: "",
     email: "",
-    foto: "", // data URL reduzida — ver UI.perfil
+    telefone: "",
+    foto: "", // data URL reduzida — ver UI.redimensionarFoto
+    // Vida acadêmica
+    curso: "Medicina",
+    instituicao: "",
+    semestre: "",
+    matricula: "",
+    ingresso: "", // ano/mês de início do curso
+    // Texto livre
+    bio: "",
+    objetivos: "",
   };
 
   const CATEGORIAS_PADRAO = [
@@ -44,7 +53,7 @@ const Store = (() => {
 
   function estadoVazio() {
     return {
-      versao: 5,
+      versao: 6,
       atualizadoEm: new Date().toISOString(),
       perfil: { ...PERFIL_PADRAO },
       financeiro: {
@@ -114,7 +123,10 @@ const Store = (() => {
     (DATA.projetos || []).forEach((p) =>
       base.projetos.push({
         id: uid("pj"), nome: p.nome || "", status: p.status || "em andamento",
-        descricao: p.descricao || "", deadline: p.deadline || "", rendaEstimada: null,
+        tipo: "", descricao: p.descricao || "", cliente: "", link: "",
+        inicio: "", deadline: p.deadline || "", prioridade: "média",
+        horasSemana: null, rendaEstimada: null, anotacoes: "",
+        recebimentos: [], custos: [], anexos: [],
         passos: (p.passos || (p.proximoPasso ? [{ texto: p.proximoPasso }] : [])).map((s) => ({
           id: uid("s"), texto: typeof s === "string" ? s : s.texto || "", feito: typeof s === "object" && !!s.feito,
         })),
@@ -220,11 +232,38 @@ const Store = (() => {
     });
 
     out.faculdade.prazos = (e.faculdade?.prazos || []).map((p) => ({ disciplinaId: "", ...p }));
-    out.projetos = (Array.isArray(e.projetos) ? e.projetos : []).map((p) => ({ rendaEstimada: null, ...p }));
+
+    // v5 → v6: cada projeto ganha página própria e passa a registrar recebimentos
+    // e custos item a item. O total que antes era digitado à mão vira o primeiro
+    // recebimento — assim o valor não se perde nem vira uma segunda fonte de
+    // verdade concorrendo com a lista.
+    out.projetos = (Array.isArray(e.projetos) ? e.projetos : []).map((p) => {
+      const proj = {
+        tipo: "", cliente: "", link: "", inicio: "", prioridade: "média",
+        horasSemana: null, rendaEstimada: null, anotacoes: "",
+        passos: [], recebimentos: [], custos: [], anexos: [],
+        ...p,
+      };
+      proj.passos = proj.passos || [];
+      proj.recebimentos = proj.recebimentos || [];
+      proj.custos = proj.custos || [];
+      proj.anexos = proj.anexos || [];
+
+      const totalAntigo = Number(proj.receitaGerada) || 0;
+      if (totalAntigo > 0 && !proj.recebimentos.length) {
+        proj.recebimentos = [{
+          id: uid("re"), data: "", valor: totalAntigo,
+          descricao: "Recebido antes do registro detalhado",
+        }];
+      }
+      delete proj.receitaGerada;
+      return proj;
+    });
+
     out.oportunidades = Array.isArray(e.oportunidades) ? e.oportunidades : [];
     // v4 → v5: aba nova para compromissos pessoais (consultas, tarefas, recados).
     out.pessoal = { compromissos: e.pessoal?.compromissos || [] };
-    out.versao = 5;
+    out.versao = 6;
     return out;
   }
 

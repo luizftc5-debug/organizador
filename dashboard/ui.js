@@ -167,7 +167,10 @@ const UI = (() => {
   ];
 
   // Páginas de detalhe se acendem no item de nível de cima a que pertencem.
-  const GRUPO_DE = { contas: "financeiro", conta: "financeiro", investimentos: "financeiro", disciplina: "faculdade" };
+  const GRUPO_DE = {
+    contas: "financeiro", conta: "financeiro", investimentos: "financeiro",
+    disciplina: "faculdade", projeto: "projetos",
+  };
 
   function contagens() {
     const e = Store.estado();
@@ -214,6 +217,16 @@ const UI = (() => {
           rotulo: d.nome,
           href: `disciplina.html?id=${encodeURIComponent(d.id)}`,
           ativo: ativo === "disciplina" && idAtivo === d.id,
+        }));
+    }
+    if (grupo === "projetos") {
+      return Store.lista("projetos")
+        .filter((p) => p.status !== "concluído" && p.status !== "arquivado")
+        .slice(0, 8)
+        .map((p) => ({
+          rotulo: p.nome,
+          href: `projeto.html?id=${encodeURIComponent(p.id)}`,
+          ativo: ativo === "projeto" && idAtivo === p.id,
         }));
     }
     return [];
@@ -264,14 +277,13 @@ const UI = (() => {
       <div class="nav-eyebrow">Painel</div>
       <nav class="nav">${itens}</nav>
       <div class="sidebar-foot">
-        <button class="btn ghost sm" id="btn-tema"><span id="tema-icone">◐</span> <span id="tema-texto">Tema</span></button>
-        <button class="btn ghost sm" id="btn-backup">⤓ Backup e dados</button>
+        <button class="sidebar-hint" id="btn-ajustes" type="button">
+          Tema, perfil e backup ficam no seu nome, lá em cima ↑
+        </button>
       </div>`;
 
     document.getElementById("btn-perfil").addEventListener("click", abrirPerfil);
-    document.getElementById("btn-tema").addEventListener("click", tema.alternar);
-    document.getElementById("btn-backup").addEventListener("click", abrirBackup);
-    tema.aplicarRotulo();
+    document.getElementById("btn-ajustes").addEventListener("click", abrirPerfil);
   }
 
   /* ------------------------------- Perfil ---------------------------------- */
@@ -305,22 +317,75 @@ const UI = (() => {
     });
   }
 
-  /** Pop-up do perfil: quem é, o que já cadastrou e edição em linha. */
+  /** Idade em anos completos — só para exibir junto da data de nascimento. */
+  function idade(iso) {
+    if (!iso) return null;
+    const nasc = new Date(iso + "T00:00:00");
+    if (Number.isNaN(nasc.getTime())) return null;
+    const hoje = new Date(hojeISO() + "T00:00:00");
+    let anos = hoje.getFullYear() - nasc.getFullYear();
+    const m = hoje.getMonth() - nasc.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) anos -= 1;
+    return anos >= 0 && anos < 130 ? anos : null;
+  }
+
+  /** Campos do formulário de perfil, agrupados em seções. */
+  const camposPerfil = () => [
+    { tipo: "secao", rotulo: "Quem é você" },
+    { nome: "nome", rotulo: "Nome completo", tipo: "text", obrigatorio: true },
+    { nome: "dataNascimento", rotulo: "Data de nascimento", tipo: "date" },
+    { nome: "telefone", rotulo: "Telefone", tipo: "text", placeholder: "(71) 90000-0000" },
+    { nome: "email", rotulo: "E-mail", tipo: "text", placeholder: "voce@exemplo.com" },
+    { nome: "cidade", rotulo: "Cidade", tipo: "text", placeholder: "Ex.: Salvador, BA" },
+
+    { tipo: "secao", rotulo: "Faculdade" },
+    { nome: "curso", rotulo: "Curso", tipo: "text", placeholder: "Ex.: Medicina" },
+    { nome: "instituicao", rotulo: "Instituição", tipo: "text", placeholder: "Ex.: UFBA" },
+    { nome: "semestre", rotulo: "Semestre atual", tipo: "number", step: "1", placeholder: "Ex.: 6" },
+    { nome: "matricula", rotulo: "Matrícula", tipo: "text", placeholder: "Número de matrícula" },
+    { nome: "ingresso", rotulo: "Início do curso", tipo: "text", placeholder: "Ex.: 2023.1" },
+
+    { tipo: "secao", rotulo: "Em poucas linhas" },
+    { nome: "bio", rotulo: "Sobre você", tipo: "textarea", placeholder: "Área de interesse, pesquisa, o que está tocando agora…" },
+    { nome: "objetivos", rotulo: "Objetivos do momento", tipo: "textarea", placeholder: "O que quer alcançar nos próximos meses." },
+  ];
+
+  /**
+   * Pop-up do perfil: quem é, o que já cadastrou, ajuste de tema e acesso ao
+   * backup. É o único lugar de configuração do painel — por isso concentra o
+   * que antes ficava espalhado no rodapé da barra lateral.
+   */
   function abrirPerfil() {
     const e = Store.estado();
     const p = e.perfil || {};
 
     const registros =
       e.financeiro.transacoes.length + e.financeiro.metas.length + e.financeiro.contas.length +
-      e.financeiro.cartoes.length + e.faculdade.prazos.length + e.projetos.length + e.oportunidades.length;
+      e.financeiro.cartoes.length + e.financeiro.investimentos.length + e.faculdade.prazos.length +
+      e.projetos.length + e.oportunidades.length + (e.pessoal?.compromissos?.length || 0);
     const disciplinas = e.faculdade.disciplinas.length;
     const urgentes = compromissos().filter((i) => {
       const d = diasAte(i.data);
       return d !== null && d >= 0 && d <= 7;
     }).length;
 
+    const anos = idade(p.dataNascimento);
     const linha = [p.instituicao, p.cidade].filter(Boolean).join(" · ");
     const curso = [p.curso, p.semestre ? `${p.semestre}º semestre` : ""].filter(Boolean).join(" · ");
+
+    // Só entram na ficha as informações preenchidas — campo vazio não vira linha.
+    const dados = [
+      ["Nascimento", p.dataNascimento ? `${fmt.data(p.dataNascimento)}${anos !== null ? ` · ${anos} anos` : ""}` : ""],
+      ["Telefone", p.telefone],
+      ["E-mail", p.email],
+      ["Cidade", p.cidade],
+      ["Instituição", p.instituicao],
+      ["Matrícula", p.matricula],
+      ["Início do curso", p.ingresso],
+    ].filter(([, v]) => v);
+
+    const textos = [["Sobre", p.bio], ["Objetivos", p.objetivos]].filter(([, v]) => v);
+    const atual = tema.atual();
 
     const html = `
       <div class="perfil-topo">
@@ -342,7 +407,27 @@ const UI = (() => {
           <div class="perfil-stat"><b>${registros}</b><span>registros</span></div>
           <div class="perfil-stat"><b>${urgentes}</b><span>nesta semana</span></div>
         </div>
-        <div class="card-note" data-uso>Anexos: calculando…</div>
+
+        ${dados.length ? `<dl class="ficha">${dados
+          .map(([k, v]) => `<div><dt>${fmt.escape(k)}</dt><dd>${fmt.escape(v)}</dd></div>`)
+          .join("")}</dl>` : `<p class="card-note" style="margin:0;">Nenhum dado pessoal preenchido ainda — use “Editar perfil” para completar sua ficha.</p>`}
+
+        ${textos.map(([k, v]) => `
+          <div class="perfil-texto">
+            <div class="stat-label">${fmt.escape(k)}</div>
+            <p>${fmt.escape(v)}</p>
+          </div>`).join("")}
+
+        <div class="perfil-ajustes">
+          <div class="field">
+            <label>Tema do painel</label>
+            <div class="seg" data-tema>
+              ${tema.OPCOES.map((o) => `<button type="button" data-valor="${o.valor}" aria-pressed="${String(o.valor === atual)}">${o.rotulo}</button>`).join("")}
+            </div>
+          </div>
+          <button class="btn block" data-acao="backup" type="button">⤓ Backup e dados</button>
+          <span class="hint" data-uso>Calculando o que está guardado…</span>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn" data-acao="fechar" type="button">Fechar</button>
@@ -350,6 +435,7 @@ const UI = (() => {
       </div>`;
 
     abrirModal(html, {
+      classe: "wide",
       aoMontar(modal, fechar) {
         const entrada = modal.querySelector("[data-arquivo-foto]");
 
@@ -378,20 +464,27 @@ const UI = (() => {
           abrirPerfil();
         });
 
+        // Tema: troca na hora, sem fechar o cartão.
+        modal.querySelector("[data-tema]").addEventListener("click", (ev) => {
+          const b = ev.target.closest("button");
+          if (!b) return;
+          tema.definir(b.dataset.valor);
+          modal.querySelectorAll("[data-tema] button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        });
+
+        modal.querySelector('[data-acao="backup"]').addEventListener("click", () => {
+          fechar(null);
+          abrirBackup();
+        });
+
         modal.querySelector('[data-acao="editar"]').addEventListener("click", async () => {
           fechar(null);
           const v = await formulario({
             titulo: "Editar perfil",
-            descricao: "Aparece na barra lateral e nos relatórios do painel.",
+            descricao: "Aparece na barra lateral e serve de ficha para o painel te conhecer.",
             valores: p,
-            campos: [
-              { nome: "nome", rotulo: "Nome", tipo: "text", obrigatorio: true },
-              { nome: "curso", rotulo: "Curso", tipo: "text", placeholder: "Ex.: Medicina" },
-              { nome: "semestre", rotulo: "Semestre", tipo: "number", step: "1", placeholder: "Ex.: 6" },
-              { nome: "instituicao", rotulo: "Instituição", tipo: "text", placeholder: "Ex.: UFBA" },
-              { nome: "cidade", rotulo: "Cidade", tipo: "text", placeholder: "Ex.: Salvador, BA" },
-              { nome: "email", rotulo: "E-mail", tipo: "text" },
-            ],
+            campos: camposPerfil(),
+            largo: true,
           });
           if (!v) return abrirPerfil();
           Store.definirPerfil(v);
@@ -407,7 +500,7 @@ const UI = (() => {
         if (typeof Arquivos !== "undefined" && Arquivos.disponivel) {
           Arquivos.uso().then((u) => {
             alvo.textContent = u.quantidade
-              ? `${u.quantidade} ${u.quantidade === 1 ? "anexo guardado" : "anexos guardados"} · ${Arquivos.tamanhoLegivel(u.bytes)} neste navegador`
+              ? `${u.quantidade} ${u.quantidade === 1 ? "anexo guardado" : "anexos guardados"} · ${Arquivos.tamanhoLegivel(u.bytes)} neste navegador.`
               : "Nenhum documento anexado ainda.";
           }).catch(() => { alvo.textContent = ""; });
         } else {
@@ -437,10 +530,47 @@ const UI = (() => {
       .sort((a, b) => a.data.localeCompare(b.data))[0] || null;
   }
 
+  /* -------------------------- Números de um projeto ------------------------ */
+
+  const somaValores = (lista) => (lista || []).reduce((s, x) => s + (Number(x.valor) || 0), 0);
+
+  /**
+   * Tudo que se deduz de um projeto. Nada disso fica guardado no estado: o
+   * faturamento sai sempre da lista de recebimentos e o custo da lista de
+   * custos, para os números não dessincronizarem dos lançamentos.
+   */
+  function resumoProjeto(p) {
+    const passos = p.passos || [];
+    const feitos = passos.filter((s) => s.feito).length;
+    const faturado = somaValores(p.recebimentos);
+    const custoTotal = somaValores(p.custos);
+    const encerrado = p.status === "concluído" || p.status === "arquivado";
+
+    return {
+      faturado,
+      custoTotal,
+      lucro: faturado - custoTotal,
+      // Quanto do previsto por mês já entrou — só faz sentido com estimativa.
+      metaMensal: Number(p.rendaEstimada) || 0,
+      passos: {
+        feitos,
+        total: passos.length,
+        percentual: passos.length ? (feitos / passos.length) * 100 : 0,
+      },
+      encerrado,
+      urgencia: p.deadline && !encerrado ? urgencia(p.deadline) : null,
+    };
+  }
+
   /* --------------------------------- Tema --------------------------------- */
 
   const tema = {
     KEY: "organizador.tema",
+    OPCOES: [
+      { valor: "auto", rotulo: "Automático" },
+      { valor: "light", rotulo: "Claro" },
+      { valor: "dark", rotulo: "Escuro" },
+    ],
     atual() {
       try { return localStorage.getItem(tema.KEY) || "auto"; } catch { return "auto"; }
     },
@@ -448,22 +578,6 @@ const UI = (() => {
       try { localStorage.setItem(tema.KEY, v); } catch { /* modo anônimo */ }
       if (v === "auto") document.documentElement.removeAttribute("data-theme");
       else document.documentElement.setAttribute("data-theme", v);
-      tema.aplicarRotulo();
-    },
-    alternar() {
-      const ordem = ["auto", "light", "dark"];
-      const prox = ordem[(ordem.indexOf(tema.atual()) + 1) % ordem.length];
-      tema.definir(prox);
-      toast(`Tema: ${{ auto: "automático", light: "claro", dark: "escuro" }[prox]}`);
-    },
-    aplicarRotulo() {
-      const t = document.getElementById("tema-texto");
-      const i = document.getElementById("tema-icone");
-      if (!t || !i) return;
-      const mapa = { auto: ["◐", "Tema automático"], light: ["☀", "Tema claro"], dark: ["☾", "Tema escuro"] };
-      const [icone, texto] = mapa[tema.atual()];
-      i.textContent = icone;
-      t.textContent = texto;
     },
     iniciar() {
       const v = tema.atual();
@@ -498,10 +612,10 @@ const UI = (() => {
 
   /* ------------------------- Modal / formulários --------------------------- */
 
-  function abrirModal(conteudoHTML, { aoMontar, aoFechar } = {}) {
+  function abrirModal(conteudoHTML, { aoMontar, aoFechar, classe = "" } = {}) {
     const backdrop = document.createElement("div");
     backdrop.className = "backdrop";
-    backdrop.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${conteudoHTML}</div>`;
+    backdrop.innerHTML = `<div class="modal ${classe}" role="dialog" aria-modal="true">${conteudoHTML}</div>`;
     document.body.appendChild(backdrop);
     document.body.style.overflow = "hidden";
 
@@ -522,10 +636,11 @@ const UI = (() => {
   /**
    * Formulário em modal.
    * campos: [{ nome, rotulo, tipo, opcoes, obrigatorio, dica, valorPadrao }]
-   * tipos: text | textarea | number | dinheiro | date | select | segmento
+   * tipos: text | textarea | number | dinheiro | date | select | segmento |
+   *        anexos | secao (só um título divisor, não guarda valor)
    * Resolve com um objeto de valores, ou null se cancelado.
    */
-  function formulario({ titulo, descricao, campos, valores = {}, rotuloConfirmar = "Salvar" }) {
+  function formulario({ titulo, descricao, campos, valores = {}, rotuloConfirmar = "Salvar", largo = false }) {
     return new Promise((resolve) => {
       const html = `
         <div class="modal-head">
@@ -541,6 +656,7 @@ const UI = (() => {
         </div>`;
 
       abrirModal(html, {
+        classe: largo ? "wide" : "",
         aoMontar(modal, fechar) {
           const form = modal.querySelector("form");
 
@@ -572,6 +688,7 @@ const UI = (() => {
             modal.querySelectorAll(".field .err").forEach((n) => n.remove());
 
             campos.forEach((c) => {
+              if (c.tipo === "secao") return; // divisor visual, não guarda valor
               if (c.tipo === "anexos") return; // tratado depois, é assíncrono
               const input = form.querySelector(`[name="${c.nome}"]`);
               let v = input.value;
@@ -625,6 +742,9 @@ const UI = (() => {
   }
 
   function campoHTML(c, valor) {
+    // Divisor com título: só organiza formulários longos, não guarda valor.
+    if (c.tipo === "secao") return `<div class="form-secao">${fmt.escape(c.rotulo)}</div>`;
+
     const v = fmt.escape(valor);
     let controle;
 
@@ -985,8 +1105,8 @@ const UI = (() => {
   }
 
   return {
-    fmt, hojeISO, mesAtual, mesAnterior, diasAte, urgencia, chaveSemana, parametro,
-    compromissos, conflitos, contagens, mediaDisciplina, proximaAvaliacao,
+    fmt, hojeISO, mesAtual, mesAnterior, diasAte, urgencia, chaveSemana, parametro, idade,
+    compromissos, conflitos, contagens, mediaDisciplina, proximaAvaliacao, resumoProjeto,
     iniciarPagina, montarLayout, tema, toast, formulario, confirmar, abrirModal,
     abrirBackup, abrirPerfil, avatarHTML, iniciais, vazio, barras, colunasMensais, medidor,
   };
