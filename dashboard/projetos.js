@@ -10,12 +10,6 @@
   const oportunidades = () => Store.lista("oportunidades");
   const ativos = () => projetos().filter((p) => p.status !== "concluído" && p.status !== "arquivado");
 
-  const progresso = (p) => {
-    const passos = p.passos || [];
-    if (!passos.length) return null;
-    return { feitos: passos.filter((s) => s.feito).length, total: passos.length };
-  };
-
   /* --------------------------------- Render --------------------------------- */
 
   function render() {
@@ -31,11 +25,11 @@
       ? "Por mês, somando os projetos ativos"
       : "Informe a renda estimada de cada projeto";
 
-    const faturado = lista.reduce((s, p) => s + (Number(p.receitaGerada) || 0), 0);
+    const faturado = lista.reduce((s, p) => s + UI.resumoProjeto(p).faturado, 0);
     document.getElementById("s-faturado").textContent = faturado ? fmt.moeda(faturado) : "—";
     document.getElementById("s-faturado-d").textContent = faturado
       ? "Total já recebido nestes projetos"
-      : "Registre o que cada projeto já rendeu";
+      : "Registre os recebimentos dentro de cada projeto";
 
     const passos = lista.flatMap((p) => p.passos || []);
     const feitos = passos.filter((s) => s.feito).length;
@@ -84,23 +78,29 @@
     box.appendChild(grid);
   }
 
+  /**
+   * Cartão-resumo. O detalhe todo (recebimentos, custos, documentos, ficha)
+   * mora em projeto.html — aqui fica só o que se lê de relance, com a próxima
+   * etapa em aberto servindo de "e agora?".
+   */
   function cartaoProjeto(p) {
     const card = document.createElement("div");
     card.className = "card";
-    const u = p.deadline ? UI.urgencia(p.deadline) : null;
-    const prog = progresso(p);
-    const encerrado = p.status === "concluído" || p.status === "arquivado";
+    const r = UI.resumoProjeto(p);
+    const href = `projeto.html?id=${encodeURIComponent(p.id)}`;
+    const proxima = (p.passos || []).find((s) => !s.feito);
 
     card.innerHTML = `
       <div class="card-head" style="align-items:flex-start;">
         <div style="min-width:0;">
           <h2 class="card-title" style="font-size:15px;">
             <span class="swatch projetos"></span>
-            <span class="${encerrado ? "strike" : ""}">${fmt.escape(p.nome)}</span>
+            <a class="titulo-link ${r.encerrado ? "strike" : ""}" href="${href}">${fmt.escape(p.nome)}</a>
           </h2>
           <div class="stat-sub" style="margin-top:5px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             <span class="badge ${p.status === "concluído" ? "feito" : ""}">${fmt.escape(p.status)}</span>
-            ${u && !encerrado ? `<span class="badge ${u.nivel}">${u.rotulo}</span>` : ""}
+            ${p.tipo ? `<span class="badge projetos">${fmt.escape(p.tipo)}</span>` : ""}
+            ${r.urgencia ? `<span class="badge ${r.urgencia.nivel}">${r.urgencia.rotulo}</span>` : ""}
             ${p.deadline ? `<span class="muted">${fmt.data(p.deadline)}</span>` : ""}
           </div>
         </div>
@@ -112,22 +112,31 @@
 
       ${p.descricao ? `<p class="card-note" style="margin:0 0 12px;">${fmt.escape(p.descricao)}</p>` : ""}
 
-      ${(p.rendaEstimada || p.receitaGerada) ? `
+      ${(r.metaMensal || r.faturado) ? `
         <div class="mini-stats">
-          ${p.rendaEstimada ? `<div><div class="stat-label">Renda estimada</div><div class="mini-valor num">${fmt.moeda(p.rendaEstimada)}<span class="muted" style="font-weight:400;">/mês</span></div></div>` : ""}
-          ${p.receitaGerada ? `<div><div class="stat-label">Já faturado</div><div class="mini-valor num" style="color:var(--success-text);">${fmt.moeda(p.receitaGerada)}</div></div>` : ""}
+          ${r.metaMensal ? `<div><div class="stat-label">Renda estimada</div><div class="mini-valor num">${fmt.moeda(r.metaMensal)}<span class="muted" style="font-weight:400;">/mês</span></div></div>` : ""}
+          ${r.faturado ? `<div><div class="stat-label">Já faturado</div><div class="mini-valor num" style="color:var(--success-text);">${fmt.moeda(r.faturado)}</div></div>` : ""}
+          ${r.custoTotal ? `<div><div class="stat-label">Custos</div><div class="mini-valor num">${fmt.moeda(r.custoTotal)}</div></div>` : ""}
         </div>` : ""}
 
       <div data-progresso></div>
-      <div data-passos></div>
-      <button class="btn ghost sm" data-add-passo style="margin-top:8px;">+ Etapa</button>`;
 
-    if (prog) {
+      <p class="card-note" style="margin:10px 0 0;">
+        ${proxima
+          ? `<b style="font-weight:640; color:var(--ink-2);">Próxima etapa:</b> ${fmt.escape(proxima.texto)}`
+          : r.passos.total
+            ? "Todas as etapas concluídas."
+            : "Sem etapas ainda — abra o projeto para quebrá-lo em passos."}
+      </p>
+
+      <a class="btn sm" href="${href}" style="margin-top:12px;">Abrir projeto →</a>`;
+
+    if (r.passos.total) {
       card.querySelector("[data-progresso]").appendChild(
         UI.medidor({
           rotulo: "Progresso",
-          atual: prog.feitos,
-          alvo: prog.total,
+          atual: r.passos.feitos,
+          alvo: r.passos.total,
           formatar: (n) => `${n}`,
           sufixo: " etapas",
           cor: "var(--s-projetos)",
@@ -135,35 +144,8 @@
       );
     }
 
-    const boxPassos = card.querySelector("[data-passos]");
-    if (!p.passos?.length) {
-      boxPassos.innerHTML = `<p class="card-note" style="margin:4px 0 0;">Sem etapas ainda — quebre o projeto em passos para acompanhar o avanço.</p>`;
-    } else {
-      const ul = document.createElement("ul");
-      ul.className = "list";
-      p.passos.forEach((s) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <input type="checkbox" class="check" ${s.feito ? "checked" : ""} aria-label="Concluir etapa" />
-          <span class="grow ${s.feito ? "strike" : ""}">${fmt.escape(s.texto)}</span>
-          <span class="row-actions"><button class="btn ghost sm" data-rm-passo>Remover</button></span>`;
-        li.querySelector("input").addEventListener("change", (ev) => {
-          Store.subAtualizar("projetos", p.id, "passos", s.id, { feito: ev.target.checked });
-          render();
-        });
-        li.querySelector("[data-rm-passo]").addEventListener("click", () => {
-          Store.subRemover("projetos", p.id, "passos", s.id);
-          UI.toast("Etapa removida.");
-          render();
-        });
-        ul.appendChild(li);
-      });
-      boxPassos.appendChild(ul);
-    }
-
     card.querySelector("[data-editar]").addEventListener("click", () => editarProjeto(p));
     card.querySelector("[data-excluir]").addEventListener("click", () => excluir("projetos", p, "Projeto"));
-    card.querySelector("[data-add-passo]").addEventListener("click", () => novaEtapa(p));
     return card;
   }
 
@@ -210,12 +192,14 @@
 
   /* --------------------------------- Ações ---------------------------------- */
 
+  // Formulário curto, para criar rápido. A ficha completa (cliente, custos,
+  // documentos, anotações) fica na página do projeto.
   const camposProjeto = () => [
     { nome: "nome", rotulo: "Nome do projeto", tipo: "text", obrigatorio: true, placeholder: "Ex.: Monitoria de fisiologia" },
     { nome: "status", rotulo: "Situação", tipo: "select", opcoes: ["planejamento", "em andamento", "pausado", "concluído", "arquivado"] },
+    { nome: "tipo", rotulo: "Tipo", tipo: "select", opcoes: ["monitoria", "cursinho", "freelance", "conteúdo", "consultoria", "plantão", "produto", "outro"] },
     { nome: "descricao", rotulo: "Descrição", tipo: "textarea", placeholder: "O que é, para quem, como cobra…" },
     { nome: "rendaEstimada", rotulo: "Renda estimada por mês (R$)", tipo: "dinheiro", dica: "Quanto você espera que renda quando estiver rodando." },
-    { nome: "receitaGerada", rotulo: "Já faturado (R$)", tipo: "dinheiro", dica: "Total recebido até agora com este projeto." },
     { nome: "deadline", rotulo: "Prazo", tipo: "date" },
   ];
 
@@ -226,6 +210,8 @@
     { nome: "anotacoes", rotulo: "Anotações", tipo: "textarea" },
   ];
 
+  const projetoNovo = (v) => ({ ...v, passos: [], recebimentos: [], custos: [], anexos: [] });
+
   async function novoProjeto() {
     const v = await UI.formulario({
       titulo: "Novo projeto",
@@ -233,9 +219,10 @@
       campos: camposProjeto(),
     });
     if (!v) return;
-    Store.inserir("projetos", { ...v, passos: [] });
-    UI.toast("Projeto criado.");
-    render();
+    // Vai direto para a página do projeto: é lá que se preenche o resto
+    // (cliente, etapas, recebimentos, documentos).
+    const novo = Store.inserir("projetos", projetoNovo(v));
+    location.href = `projeto.html?id=${encodeURIComponent(novo.id)}`;
   }
 
   async function editarProjeto(p) {
@@ -243,19 +230,6 @@
     if (!v) return;
     Store.atualizar("projetos", p.id, v);
     UI.toast("Projeto atualizado.");
-    render();
-  }
-
-  async function novaEtapa(p) {
-    const v = await UI.formulario({
-      titulo: "Nova etapa",
-      descricao: `Adicionar um passo a "${p.nome}".`,
-      campos: [{ nome: "texto", rotulo: "O que precisa ser feito", tipo: "text", obrigatorio: true, placeholder: "Ex.: Divulgar nas turmas do 3º semestre" }],
-      rotuloConfirmar: "Adicionar",
-    });
-    if (!v) return;
-    Store.subInserir("projetos", p.id, "passos", { texto: v.texto, feito: false });
-    UI.toast("Etapa adicionada.");
     render();
   }
 
@@ -289,7 +263,7 @@
       rotuloConfirmar: "Criar projeto",
     });
     if (!v) return;
-    Store.inserir("projetos", { ...v, passos: [] });
+    Store.inserir("projetos", projetoNovo(v));
     const indice = Store.indiceDe("oportunidades", o.id);
     Store.remover("oportunidades", o.id);
     render();

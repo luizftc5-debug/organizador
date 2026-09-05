@@ -31,7 +31,7 @@ Não é preciso editar nenhum arquivo. Tudo se cadastra pelos botões das telas:
 | **Contas e cartões** | Cadastrar contas com saldo, cadastrar cartões com fechamento e vencimento. Cada uma abre numa **página própria**, com saldo/fatura, gastos por categoria só dela e a lista de lançamentos |
 | **Investimentos** | Renda fixa, ações, fundos, cripto — o que já aplicou e quanto vale hoje, com rentabilidade calculada e distribuição por tipo |
 | **Faculdade** | Disciplinas, prazos e entregas. Cada disciplina abre em **página própria**, com avaliações e notas, prazos, materiais e resumos — em materiais e resumos dá para **anexar documentos** (PDF, slides, fotos) ou **importar do Google Drive** |
-| **Projetos** | Só iniciativas pessoais que geram renda, divididas em etapas, com renda estimada e o que já foi faturado |
+| **Projetos** | Só iniciativas pessoais que geram renda. Cada projeto abre em **página própria**, com ficha completa, etapas, recebimentos, custos, documentos e anotações |
 | **Pessoal** | Consultas, tarefas e recados que não são financeiro, faculdade nem projeto — ex.: consulta médica, levar o carro à revisão |
 
 > Trabalhos da faculdade e o TCC ficam em **Faculdade**, não em Projetos.
@@ -57,14 +57,37 @@ Página separada dos lançamentos do dia a dia, em **Financeiro → Investimento
 aplicou (valor e data) e, de vez em quando, atualize o valor de hoje — a rentabilidade em R$ e % é
 calculada sozinha, e a carteira é resumida por tipo (renda fixa, ações, fundos, cripto…).
 
-### Seu perfil
+### Página de cada projeto
 
-Clique no seu nome, no alto da barra lateral, para abrir o cartão de perfil: ele mostra quantas
-disciplinas e registros você tem e quantos compromissos há nesta semana.
+Clique no nome de um projeto, em **Projetos**, para abrir a página só dele. É lá que fica tudo:
 
-- **Editar perfil** muda nome, curso, semestre, instituição e cidade — o que aparece na barra lateral.
+- **Números no alto**: já faturado, custos, resultado (faturado menos custos) e renda estimada.
+- **Etapas**: quebre o projeto em passos, cada um com prazo próprio, e acompanhe a barra de progresso.
+- **Ficha**: situação, tipo, cliente ou parceiro, prioridade, início, prazo, horas por semana e link.
+- **Recebimentos**: registre cada pagamento à medida que entra. O total do projeto sai desta lista,
+  então nunca fica desatualizado.
+- **Custos**: material, anúncio, transporte, ferramenta paga — o que o projeto consome.
+- **Documentos**: contrato, proposta, arte de divulgação. Mesmo sistema de anexos das disciplinas.
+- **Anotações**: espaço livre para combinados, contatos e ideias.
+
+Na lista de projetos, o cartão continua mostrando o resumo e a **próxima etapa em aberto**.
+
+### Seu perfil e os ajustes do painel
+
+Clique no seu nome, no alto da barra lateral, para abrir o cartão de perfil. **É o único lugar de
+configuração** — tema e backup ficam ali dentro, junto com sua ficha.
+
+- **Editar perfil** abre um formulário em três partes: quem você é (nome, data de nascimento,
+  telefone, e-mail, cidade), faculdade (curso, instituição, semestre, matrícula, início do curso) e
+  dois textos livres — sobre você e seus objetivos do momento. Só o que estiver preenchido aparece
+  na ficha; a idade é calculada sozinha a partir da data de nascimento.
 - **Enviar foto** troca as iniciais por uma foto sua. A imagem é recortada e reduzida antes de
   salvar, então ocupa poucos KB.
+- **Tema do painel**: automático (segue o sistema), claro ou escuro. Muda na hora.
+- **Backup e dados**: exportar, importar ou apagar tudo.
+
+O cartão também mostra quantas disciplinas e registros você tem, quantos compromissos há nesta
+semana e quanto os documentos anexados ocupam.
 
 ### Anexar documentos nas disciplinas
 
@@ -99,16 +122,13 @@ com os prazos da faculdade e os deadlines dos projetos.
 No próprio navegador (localStorage) — nada é enviado para lugar nenhum. Consequência prática: os
 dados ficam **naquele navegador, naquele computador**.
 
-Para backup ou para usar em outro aparelho, clique em **Backup** na barra lateral:
+Para backup ou para usar em outro aparelho, clique no **seu nome** na barra lateral e depois em
+**Backup e dados**:
 
 - **Exportar** gera um arquivo `.json` com tudo, inclusive os documentos anexados
 - **Importar** restaura esse arquivo em qualquer navegador, anexos e todos
 
 Vale exportar de tempos em tempos — limpar os dados de navegação do navegador apaga o que está salvo.
-
-### Tema
-
-O botão **Tema** alterna entre automático (segue o sistema), claro e escuro.
 
 ## Conectar ao Google Calendar e Drive
 
@@ -138,6 +158,7 @@ dashboard/
   faculdade.html       faculdade.js      lista de disciplinas e prazos
   disciplina.html      disciplina.js     página de uma disciplina
   projetos.html        projetos.js       projetos de renda e oportunidades
+  projeto.html         projeto.js        página de um projeto
   pessoal.html         pessoal.js        compromissos pessoais
   store.js                               dados: localStorage, CRUD e backup
   arquivos.js                            anexos: IndexedDB (PDF, slides, fotos)
